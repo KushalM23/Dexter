@@ -27,6 +27,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local env files
+.env
 .env*.local
 
 # vercel
@@ -37,7 +38,4 @@ yarn-error.log*
 next-env.d.ts
 
 # Application specific
-/dexter-app/.next/
-/dexter-app/out/
-/dexter-app/build/
-/dexter-app/public/captures/
+/public/captures/

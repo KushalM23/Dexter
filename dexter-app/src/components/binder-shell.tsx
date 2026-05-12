@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { tabs, tabTheme } from "@/lib/constants";
 import type { TabSlug } from "@/lib/types";
@@ -23,73 +23,112 @@ export function BinderShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const activeIndex = tabs.findIndex((t) => t.slug === activeTab);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff7bf,_transparent_35%),linear-gradient(180deg,#f5f7ff_0%,#f8f4ff_45%,#fff8e8_100%)] px-4 py-4 text-[#1A1A1A] sm:px-6 sm:py-8">
-      <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-5xl items-center justify-center">
-        <div className="relative flex w-full max-w-[440px] overflow-visible rounded-[42px] border-[5px] border-[#1A1A1A] bg-[#FAFAFF] shadow-[0_28px_70px_rgba(34,34,34,0.18)]">
+    <div className="flex min-h-screen w-full bg-[#FAFAFF] text-[#1A1A1A]">
+
+      {/* Binder Tab Rail */}
+      <div className="relative z-20 flex min-h-screen w-[48px] flex-shrink-0 sm:w-[56px]">
+        {/* Spine — full-height vertical line at the right edge of the rail */}
+        <div className="absolute bottom-0 right-0 top-0 z-0 w-[2px] bg-[#1A1A1A]" />
+
+        {/* Tab stack */}
+        <nav className="absolute left-0 right-0 top-[12%] z-10 flex flex-col">
+          {tabs.map((tab, index) => {
+            const active = tab.slug === activeTab;
+            const tabColor = tabTheme[tab.slug];
+
+            return (
+              <Link
+                key={tab.slug}
+                href={pathForTab(tab.slug)}
+                className="pointer-events-auto relative block focus:outline-none"
+                style={{
+                  zIndex: active ? 30 : 10,
+                  marginTop: index !== 0 ? -2 : 0,
+                }}
+              >
+                <div
+                  className="flex items-center justify-center transition-all duration-200 ease-out"
+                  style={{
+                    backgroundColor: active ? "#FAFAFF" : tabColor,
+                    height: active ? 120 : 100,
+                    border: "2px solid #1A1A1A",
+                    borderRight: active ? "none" : "2px solid #1A1A1A",
+                    boxShadow: active
+                      ? "none"
+                      : "inset -4px 0 6px -3px rgba(0,0,0,0.1)",
+                  }}
+                >
+                  <span
+                    className="select-none transition-colors duration-200"
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      color: active ? tabColor : "#FFFFFF",
+                      writingMode: "vertical-rl",
+                      transform: "rotate(180deg)",
+                      fontSize: active ? "0.75rem" : "0.65rem",
+                      letterSpacing: "0.08em",
+                      textShadow: active
+                        ? "none"
+                        : "0 1px 2px rgba(0,0,0,0.15)",
+                    }}
+                  >
+                    {tab.label}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="relative z-10 flex-1 overflow-y-auto bg-[#FAFAFF]">
+        <AnimatePresence mode="wait">
           <motion.div
             key={pathname}
-            initial={{ opacity: 0, y: 22 }}
+            initial={{
+              opacity: 0,
+              y: activeIndex > tabs.length / 2 ? 30 : -30,
+            }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 180, damping: 20 }}
-            className="flex min-h-[860px] flex-1 flex-col overflow-hidden rounded-[36px]"
+            exit={{
+              opacity: 0,
+              y: activeIndex > tabs.length / 2 ? -20 : 20,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 300,
+              damping: 30,
+            }}
+            className="mx-auto flex min-h-screen w-full max-w-4xl flex-col"
           >
-            <header className="border-b-[3px] border-black/8 px-6 pt-8 pb-5">
+            <header className="border-b-[2px] border-black/10 px-6 pb-5 pt-12 sm:px-12 sm:pt-16">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div
-                    className="mb-2 h-2 w-16 rounded-full"
+                    className="mb-3 h-[6px] w-12 rounded-full"
                     style={{ backgroundColor: tabTheme[activeTab] }}
                   />
-                  <h1 className="font-[family:var(--font-display)] text-[2.15rem] leading-[0.94] tracking-[-0.04em]">
+                  <h1
+                    className="text-[2.5rem] leading-[0.9] tracking-[-0.04em]"
+                    style={{ fontFamily: "var(--font-display)" }}
+                  >
                     {title}
                   </h1>
                 </div>
                 {action}
               </div>
             </header>
-            <main className="relative flex-1 overflow-y-auto px-6 pb-8 pt-5">
+            <main className="flex-1 px-6 pb-20 pt-8 sm:px-12">
               {children}
             </main>
           </motion.div>
-
-          <nav className="pointer-events-none absolute right-2 top-1/2 z-10 flex -translate-y-1/2 flex-col items-end gap-2">
-            {tabs.map((tab) => {
-              const active = tab.slug === activeTab;
-              const tabColor = tabTheme[tab.slug];
-
-              return (
-                <Link
-                  key={tab.slug}
-                  href={pathForTab(tab.slug)}
-                  className="pointer-events-auto group block focus:outline-none"
-                >
-                  <motion.div
-                    whileHover={{ x: -4 }}
-                    className="flex h-[84px] w-[44px] items-center justify-center rounded-r-[18px] rounded-l-[14px] border-[3px] border-[#1A1A1A] shadow-[0_10px_22px_rgba(34,34,34,0.13)]"
-                    style={{
-                      backgroundColor: active ? tabColor : `${tabColor}4D`,
-                      width: active ? 50 : 42,
-                    }}
-                  >
-                    <span
-                      className="font-[family:var(--font-display)] text-[0.72rem] tracking-[0.2em]"
-                      style={{
-                        color: active ? "#FAFAFF" : "#1A1A1A",
-                        writingMode: "vertical-rl",
-                        transform: "rotate(180deg)",
-                      }}
-                    >
-                      {tab.label}
-                    </span>
-                  </motion.div>
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
+        </AnimatePresence>
       </div>
+
     </div>
   );
 }
