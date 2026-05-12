@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="100%" height="100%">
+  <!-- Left eye -->
+  <ellipse cx="62" cy="60" rx="42" ry="44" fill="white" stroke="#1A1A1A" stroke-width="5" />
+  <circle cx="62" cy="60" r="26" fill="#2191FB" />
+  <circle cx="62" cy="60" r="16" fill="#8EC8FF" />
+  <circle cx="62" cy="58" r="9" fill="#1A1A1A" />
+  <circle cx="57" cy="50" r="5" fill="white" fill-opacity="0.8" />
+  <!-- Right eye -->
+  <ellipse cx="138" cy="60" rx="42" ry="44" fill="white" stroke="#1A1A1A" stroke-width="5" />
+  <circle cx="138" cy="60" r="26" fill="#2191FB" />
+  <circle cx="138" cy="60" r="16" fill="#8EC8FF" />
+  <circle cx="138" cy="58" r="9" fill="#1A1A1A" />
+  <circle cx="133" cy="50" r="5" fill="white" fill-opacity="0.8" />
+</svg>

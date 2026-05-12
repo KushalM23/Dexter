@@ -14,7 +14,7 @@ const bodyFont = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "DexE",
+  title: "Dexter",
   description: "A mobile-first wildlife binder for playful species collection.",
 };
 

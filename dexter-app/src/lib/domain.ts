@@ -1354,7 +1354,7 @@ export async function ensureUserSetup(authUser: SupabaseUser) {
       email: authUser.email,
       google_name: displayName,
       display_name: displayName,
-      avatar_id: "avatar-fox",
+      avatar_id: "avatar-1",
       friend_code: friendCode,
       total_xp: 0,
       environment_type: "urban",
