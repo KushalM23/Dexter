@@ -4,67 +4,39 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  Camera,
-  CircleX,
-  Flame,
-  RotateCcw,
-  Sparkles,
-  Trophy,
-} from "lucide-react";
+import { Camera, ChevronRight, X, MapPin, Flame, Layers } from "lucide-react";
 
-import { SpeciesCard } from "@/components/species-card";
 import type { CaptureFailurePayload, CaptureResult } from "@/lib/types";
-
-const progressMessages = [
-  "Scanning the wild...",
-  "Consulting the field guide...",
-  "Preparing your catch...",
-];
 
 type HomeData = {
   user: {
     displayName: string;
+    environmentType?: string;
+    totalXp?: number;
   };
-  todayLabel: string;
   totalCards: number;
   stats: {
-    weeklyXp: number;
-    capturesToday: number;
     streak: number;
   };
   recentCaptures: Array<{
     collection: {
-      rarity: "common" | "uncommon" | "rare" | "epic" | "legendary";
-      xpAwarded: number;
-      captureLocationLabel: string;
       capturedAt: string;
     };
     card: {
       commonName: string;
       scientificName: string;
-      kingdom: string;
-      phylum: string;
-      className: string;
-      order: string;
-      family: string;
-      genus: string;
-      species: string;
-      rarity: "common" | "uncommon" | "rare" | "epic" | "legendary";
-      xpValue: number;
-      lore: string;
-      occurrenceCount: number;
+      photoUrl: string;
     };
   }>;
-  activeChallenge: {
-    title: string;
-    description: string;
-    xpReward: number;
-    progress: number;
-    targetCount: number;
-    expiresLabel: string;
-  } | null;
 };
+
+const FUN_FACTS = [
+  "Did you know that octopuses have three hearts?",
+  "Did you know that honey never ever spoils?",
+  "Did you know that a flock of crows is a murder?",
+  "Did you know that elephants cannot jump?",
+  "Did you know that cows have best friends?",
+];
 
 function isFailureResult(
   value: CaptureResult | null,
@@ -81,15 +53,20 @@ export function HomeScreen({ data }: { data: HomeData }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const [mounted, setMounted] = useState(false);
   const [mode, setMode] = useState<
     "idle" | "camera" | "preview" | "processing" | "result"
   >("idle");
   const [captureData, setCaptureData] = useState<string | null>(null);
   const [result, setResult] = useState<CaptureResult | null>(null);
-  const [progressIndex, setProgressIndex] = useState(0);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [location, setLocation] = useState<{ lat?: number; lng?: number }>({});
   const [isPending, setIsPending] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   function stopCamera() {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -97,9 +74,7 @@ export function HomeScreen({ data }: { data: HomeData }) {
   }
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      return;
-    }
+    if (!navigator.geolocation) return;
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -107,7 +82,6 @@ export function HomeScreen({ data }: { data: HomeData }) {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         };
-
         setLocation(nextLocation);
         fetch("/api/location", {
           method: "POST",
@@ -121,18 +95,6 @@ export function HomeScreen({ data }: { data: HomeData }) {
   }, []);
 
   useEffect(() => {
-    if (mode !== "processing") {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      setProgressIndex((current) => (current + 1) % progressMessages.length);
-    }, 1100);
-
-    return () => window.clearInterval(timer);
-  }, [mode]);
-
-  useEffect(() => {
     if (mode !== "camera") {
       stopCamera();
       return;
@@ -141,9 +103,7 @@ export function HomeScreen({ data }: { data: HomeData }) {
     async function startCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: "environment" },
-          },
+          video: { facingMode: { ideal: "environment" } },
           audio: false,
         });
         streamRef.current = stream;
@@ -154,21 +114,16 @@ export function HomeScreen({ data }: { data: HomeData }) {
           await videoRef.current.play();
         }
       } catch {
-        setCameraError(
-          "Camera unavailable in this browser. Check permissions and try again.",
-        );
+        setCameraError("Camera unavailable.");
       }
     }
 
     void startCamera();
-
     return () => stopCamera();
   }, [mode]);
 
   const takeShot = () => {
-    if (!videoRef.current || !canvasRef.current) {
-      return;
-    }
+    if (!videoRef.current || !canvasRef.current) return;
 
     const width = videoRef.current.videoWidth || 720;
     const height = videoRef.current.videoHeight || 960;
@@ -176,9 +131,7 @@ export function HomeScreen({ data }: { data: HomeData }) {
     canvasRef.current.height = height;
     const context = canvasRef.current.getContext("2d");
 
-    if (!context) {
-      return;
-    }
+    if (!context) return;
 
     context.drawImage(videoRef.current, 0, 0, width, height);
     const next = canvasRef.current.toDataURL("image/jpeg", 0.85);
@@ -187,20 +140,14 @@ export function HomeScreen({ data }: { data: HomeData }) {
   };
 
   const confirmCapture = () => {
-    if (!captureData) {
-      return;
-    }
+    if (!captureData) return;
 
     setMode("processing");
-    setProgressIndex(0);
-
     setIsPending(true);
 
     fetch("/api/capture", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         imageData: captureData,
         ...location,
@@ -211,12 +158,11 @@ export function HomeScreen({ data }: { data: HomeData }) {
         setResult(nextResult);
         setMode("result");
         setIsPending(false);
-        router.refresh();
       })
       .catch(() => {
         setResult({
           kind: "error",
-          message: "Something went wrong. Try again.",
+          message: "Error.",
         });
         setMode("result");
         setIsPending(false);
@@ -228,352 +174,294 @@ export function HomeScreen({ data }: { data: HomeData }) {
     setResult(null);
     setMode("camera");
   };
+
   const captureFailure = isFailureResult(result) ? result : null;
 
+  const firstName = data.user.displayName.split(" ")[0] || "Explorer";
+  const xpTillNext = 1000 - ((data.user.totalXp || 0) % 1000);
+  const habitat = data.user.environmentType || "Urban";
+  const funFact = FUN_FACTS[data.totalCards % FUN_FACTS.length];
+
+  const getRarityAnimation = (rarity: string) => {
+    switch (rarity) {
+      case "legendary": return { y: [0, -20, 0], scale: [1, 1.05, 1], transition: { duration: 2, repeat: Infinity } };
+      case "epic": return { y: [0, -10, 0], transition: { duration: 2, repeat: Infinity } };
+      case "rare": return { scale: [1, 1.02, 1], transition: { duration: 2, repeat: Infinity } };
+      default: return { opacity: [0, 1], y: [20, 0], transition: { duration: 0.5 } };
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col flex-1 min-h-[calc(100dvh-180px)] relative">
       <AnimatePresence mode="wait">
         {mode === "idle" ? (
           <motion.div
             key="idle"
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-6"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+            className="flex flex-col flex-1"
           >
-            <section className="rounded-[30px] border-[3px] border-[#1A1A1A] bg-[#FFF7BF] p-5">
-              <div className="text-xs font-black uppercase tracking-[0.24em] text-black/45">
-                {data.todayLabel}
-              </div>
-              <h2 className="mt-3 font-[family:var(--font-display)] text-5xl leading-[0.9] tracking-[-0.06em]">
-                Hey,
-                <br />
-                {data.user.displayName.split(" ")[0]}.
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-black/65">
-                {data.totalCards} cards logged. The binder is ready for the next
-                wild find.
-              </p>
-            </section>
-
-            <section className="grid grid-cols-3 gap-3">
-              <StatBlock
-                icon={<Sparkles className="h-5 w-5" />}
-                label="XP this week"
-                value={`${data.stats.weeklyXp}`}
-                tint="#2191FB"
-              />
-              <StatBlock
-                icon={<Camera className="h-5 w-5" />}
-                label="Captures today"
-                value={`${data.stats.capturesToday}`}
-                tint="#FE5F55"
-              />
-              <StatBlock
-                icon={<Flame className="h-5 w-5" />}
-                label="Current streak"
-                value={`${data.stats.streak}d`}
-                tint="#1FC147"
-              />
-            </section>
-
-            <section>
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="font-[family:var(--font-display)] text-2xl leading-none">
-                  Recent captures
-                </h3>
-                <span className="text-xs font-black uppercase tracking-[0.22em] text-black/40">
-                  Last three
-                </span>
-              </div>
-              {data.recentCaptures.length > 0 ? (
-                <div className="flex gap-4 overflow-x-auto pb-1">
-                  {data.recentCaptures.map((entry) => (
-                    <div
-                      key={`${entry.card.commonName}-${entry.collection.capturedAt}`}
-                      className="min-w-[210px]"
-                    >
-                      <SpeciesCard
-                        compact
-                        commonName={entry.card.commonName}
-                        scientificName={entry.card.scientificName}
-                        kingdom={entry.card.kingdom}
-                        phylum={entry.card.phylum}
-                        className={entry.card.className}
-                        order={entry.card.order}
-                        family={entry.card.family}
-                        genus={entry.card.genus}
-                        species={entry.card.species}
-                        rarity={entry.collection.rarity}
-                        xpValue={entry.collection.xpAwarded}
-                        lore={entry.card.lore}
-                        occurrenceCount={entry.card.occurrenceCount}
-                        locationLabel={entry.collection.captureLocationLabel}
-                        capturedAt={entry.collection.capturedAt}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-[28px] border-[3px] border-dashed border-black/18 bg-white px-5 py-8 text-sm leading-6 text-black/55">
-                  No captures yet. Your first successful sighting will land
-                  here.
-                </div>
-              )}
-            </section>
-
-            {data.activeChallenge ? (
-              <section className="rounded-[28px] border-[3px] border-[#1A1A1A] bg-[#EAF9ED] p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-xs font-black uppercase tracking-[0.24em] text-black/45">
-                      Active challenge
-                    </div>
-                    <h3 className="mt-2 font-[family:var(--font-display)] text-2xl leading-none">
-                      {data.activeChallenge.title}
-                    </h3>
-                  </div>
-                  <div className="rounded-full bg-[#1FC147] px-3 py-2 text-xs font-black uppercase tracking-[0.2em] text-white">
-                    {data.activeChallenge.xpReward} XP
-                  </div>
-                </div>
-                <p className="mt-3 text-sm leading-6 text-black/65">
-                  {data.activeChallenge.description}
+            {/* Header */}
+            <div className="flex items-center gap-3">
+              <Image src="/icon.svg" width={42} height={42} alt="App Logo" className="drop-shadow-sm" />
+              <div className="flex flex-col">
+                <h1 className="text-[32px] text-[#1A1A1A] leading-none tracking-wide mt-1" style={{ fontFamily: "var(--font-display)" }}>
+                  Hey {firstName}
+                </h1>
+                <p className="text-xs text-[#1A1A1A]/50 font-bold tracking-wide">
+                  Ready to explore?
                 </p>
-                <div className="mt-4 h-3 overflow-hidden rounded-full bg-black/10">
-                  <div
-                    className="h-full rounded-full bg-[#1FC147]"
-                    style={{
-                      width: `${(data.activeChallenge.progress / data.activeChallenge.targetCount) * 100}%`,
-                    }}
-                  />
-                </div>
-                <div className="mt-3 flex items-center justify-between text-xs font-black uppercase tracking-[0.22em] text-black/45">
-                  <span>
-                    {data.activeChallenge.progress}/
-                    {data.activeChallenge.targetCount}
-                  </span>
-                  <span>{data.activeChallenge.expiresLabel} left</span>
-                </div>
-              </section>
-            ) : null}
+              </div>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => setMode("camera")}
-              className="sticky bottom-0 flex w-full items-center justify-center gap-3 rounded-[28px] border-[3px] border-[#1A1A1A] bg-[#E1BC29] px-5 py-5 font-[family:var(--font-display)] text-3xl text-[#1A1A1A] shadow-[0_14px_30px_rgba(0,0,0,0.12)]"
-            >
-              <Camera className="h-7 w-7" />
-              Capture
-            </button>
+            {/* Middle Section: XP & Habitat */}
+            <div className="mt-8 flex items-center justify-between">
+              <div>
+                <div className="text-[#1A1A1A] font-bold text-sm">
+                  <span className="text-[#2191FB] text-2xl mr-1" style={{ fontFamily: "var(--font-display)" }}>{xpTillNext}</span>XP till next level
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 bg-[#2191FB]/10 px-3 py-1.5 rounded-full text-xs font-bold capitalize text-[#2191FB]">
+                <MapPin className="h-3.5 w-3.5" />
+                {habitat}
+              </div>
+            </div>
+
+            {/* Two Small Cards */}
+            <div className="mt-5 grid grid-cols-2 gap-4">
+              <motion.div whileHover={{ scale: 1.02 }} className="relative bg-gradient-to-br from-[#2191FB] to-[#1b7edb] rounded-[24px] p-5 flex flex-col justify-between overflow-hidden shadow-sm h-[110px]">
+                <Flame className="absolute -right-4 -bottom-4 h-24 w-24 text-white opacity-10" />
+                <div className="flex justify-between items-start z-10">
+                  <span className="text-white/80 text-[10px] font-bold uppercase tracking-widest">Streak</span>
+                  <Flame className="h-4 w-4 text-white/80" />
+                </div>
+                <div className="mt-auto z-10">
+                  <span className="text-white text-4xl leading-none" style={{ fontFamily: "var(--font-display)" }}>{data.stats.streak}</span>
+                  <span className="text-white/80 text-xs font-bold ml-1">Days</span>
+                </div>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.02 }} className="relative bg-gradient-to-br from-[#2191FB] to-[#1b7edb] rounded-[24px] p-5 flex flex-col justify-between overflow-hidden shadow-sm h-[110px]">
+                <Layers className="absolute -right-4 -bottom-4 h-24 w-24 text-white opacity-10" />
+                <div className="flex justify-between items-start z-10">
+                  <span className="text-white/80 text-[10px] font-bold uppercase tracking-widest">Cards</span>
+                  <Layers className="h-4 w-4 text-white/80" />
+                </div>
+                <div className="mt-auto z-10">
+                  <span className="text-white text-4xl leading-none" style={{ fontFamily: "var(--font-display)" }}>{data.totalCards}</span>
+                  <span className="text-white/80 text-xs font-bold ml-1">Found</span>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Recent Captures */}
+            <div className="mt-8 flex flex-col flex-1">
+              <div className="flex items-center justify-between mb-4 px-1">
+                <h2 className="font-bold text-[#1A1A1A] text-lg">Recent Captures</h2>
+                <button onClick={() => router.push('/dexe')} className="text-[#2191FB] text-sm font-bold flex items-center gap-1">
+                  See all <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+              
+              <div className="flex gap-4">
+                {data.recentCaptures.slice(0, 2).map((entry) => (
+                  <motion.div whileHover={{ scale: 1.02 }} key={entry.collection.capturedAt} className="flex-1 aspect-[3/4] max-h-[220px] rounded-[24px] bg-white border border-black/5 p-4 flex flex-col relative overflow-hidden shadow-sm">
+                    {entry.card.photoUrl && (
+                      <img src={entry.card.photoUrl} className="absolute inset-0 w-full h-full object-cover opacity-15 grayscale" />
+                    )}
+                    <div className="relative z-10 flex-1 flex flex-col justify-end">
+                       <div className="font-bold text-[#1A1A1A] text-[18px] leading-tight line-clamp-2" style={{ fontFamily: "var(--font-display)" }}>{entry.card.commonName}</div>
+                    </div>
+                  </motion.div>
+                ))}
+                {data.recentCaptures.length === 0 && (
+                  <div className="w-full text-center py-10 text-sm text-black/40 font-bold bg-black/5 rounded-[24px]">No captures yet.</div>
+                )}
+              </div>
+            </div>
+
+            {/* Fun Fact */}
+            <div className="mt-6 mb-4">
+              <p className="text-[13px] italic text-[#1A1A1A]/40 font-bold text-center">
+                "{funFact}"
+              </p>
+            </div>
           </motion.div>
         ) : (
           <motion.div
             key="capture"
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="space-y-4"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="flex flex-col flex-1 relative rounded-[32px] overflow-hidden bg-[#1A1A1A] shadow-2xl"
           >
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("idle");
-                  setCaptureData(null);
-                  setResult(null);
-                }}
-                className="rounded-full border-[3px] border-[#1A1A1A] bg-white p-3"
-              >
-                <CircleX className="h-5 w-5" />
-              </button>
-              <div className="text-xs font-black uppercase tracking-[0.22em] text-black/40">
-                Field camera
-              </div>
-            </div>
-
-            <div className="overflow-hidden rounded-[34px] border-[4px] border-[#1A1A1A] bg-[#1A1A1A]">
-              {mode === "camera" ? (
-                <div className="relative aspect-[3/4] bg-black">
-                  <video
-                    ref={videoRef}
-                    className="h-full w-full object-cover"
-                    playsInline
-                    muted
-                  />
-                  {cameraError ? (
-                    <div className="absolute inset-0 flex items-center justify-center px-8 text-center text-sm font-semibold text-white/75">
-                      {cameraError}
-                    </div>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="relative aspect-[3/4] w-full">
-                  <Image
-                    src={captureData ?? ""}
-                    alt="Capture preview"
-                    fill
-                    unoptimized
-                    className="object-cover"
-                  />
-                </div>
-              )}
-            </div>
-
-            <canvas ref={canvasRef} className="hidden" />
-
-            {mode === "camera" ? (
+            {mode === "camera" && (
               <>
-                <button
-                  type="button"
-                  onClick={takeShot}
-                  className="flex w-full items-center justify-center gap-3 rounded-[28px] border-[3px] border-[#1A1A1A] bg-[#E1BC29] px-5 py-5 font-[family:var(--font-display)] text-3xl"
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => { setMode("idle"); setCaptureData(null); setResult(null); }}
+                  className="absolute top-4 left-4 z-20 h-10 w-10 bg-black/40 backdrop-blur rounded-full flex justify-center items-center text-white"
                 >
-                  <Camera className="h-7 w-7" />
-                  Snap
-                </button>
+                  <X className="h-5 w-5" />
+                </motion.button>
+                <video
+                  ref={videoRef}
+                  className="h-full w-full object-cover"
+                  playsInline
+                  muted
+                />
+                {cameraError && (
+                  <div className="absolute inset-0 flex items-center justify-center px-8 text-center text-sm font-medium text-white">
+                    {cameraError}
+                  </div>
+                )}
               </>
-            ) : null}
+            )}
 
-            {mode === "preview" ? (
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={resetCapture}
-                  className="flex items-center justify-center gap-2 rounded-[24px] border-[3px] border-[#1A1A1A] bg-white px-4 py-4 font-black uppercase tracking-[0.18em]"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Retry
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmCapture}
-                  disabled={isPending}
-                  className="rounded-[24px] border-[3px] border-[#1A1A1A] bg-[#E1BC29] px-4 py-4 font-[family:var(--font-display)] text-2xl"
-                >
-                  Confirm
-                </button>
-              </div>
-            ) : null}
+            {(mode === "preview" || mode === "processing") && (
+              <>
+                <Image
+                  src={captureData ?? ""}
+                  alt="Preview"
+                  fill
+                  unoptimized
+                  className={`object-cover transition-all duration-500 ${mode === "processing" ? "blur-xl brightness-50" : ""}`}
+                />
+                {mode === "processing" ? (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="flex gap-3">
+                      <div className="w-4 h-4 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-4 h-4 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-4 h-4 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="absolute bottom-8 left-0 right-0 px-6 flex gap-3">
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={resetCapture}
+                      className="flex-1 h-14 bg-white text-[#1A1A1A] text-xl tracking-wide rounded-full shadow-lg"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      Retry
+                    </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={confirmCapture}
+                      disabled={isPending}
+                      className="flex-1 h-14 bg-[#2191FB] text-white text-xl tracking-wide rounded-full shadow-lg"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      Confirm
+                    </motion.button>
+                  </div>
+                )}
+              </>
+            )}
 
-            {mode === "processing" ? (
-              <div className="rounded-[28px] border-[3px] border-[#1A1A1A] bg-[#FFF7BF] px-5 py-5">
-                <div className="h-3 overflow-hidden rounded-full bg-black/10">
-                  <motion.div
-                    animate={{ width: ["25%", "63%", "91%"] }}
-                    transition={{
-                      duration: 2,
-                      repeat: Number.POSITIVE_INFINITY,
-                    }}
-                    className="h-full rounded-full bg-[#2191FB]"
-                  />
-                </div>
-                <div className="mt-3 text-sm font-semibold text-black/65">
-                  {progressMessages[progressIndex]}
-                </div>
-              </div>
-            ) : null}
-
-            {mode === "result" && result ? (
-              <div className="space-y-4">
+            {mode === "result" && result && (
+              <div className="absolute inset-0 bg-[#FAFAFF] flex flex-col items-center justify-center px-6">
                 {result.kind === "new" || result.kind === "duplicate" ? (
                   <>
-                    <SpeciesCard
-                      commonName={result.card.commonName}
-                      scientificName={result.card.scientificName}
-                      kingdom={result.card.kingdom}
-                      phylum={result.card.phylum}
-                      className={result.card.className}
-                      order={result.card.order}
-                      family={result.card.family}
-                      genus={result.card.genus}
-                      species={result.card.species}
-                      rarity={result.card.rarity}
-                      xpValue={result.card.xpValue}
-                      lore={result.card.lore}
-                      occurrenceCount={result.card.occurrenceCount}
-                      locationLabel={result.collection?.captureLocationLabel}
-                      capturedAt={result.collection?.capturedAt}
-                      disabled={result.kind === "duplicate"}
-                    />
-                    <div className="rounded-[28px] border-[3px] border-[#1A1A1A] bg-white p-5">
-                      <div className="font-[family:var(--font-display)] text-3xl leading-none">
-                        {result.kind === "new"
-                          ? `+${result.xpAwarded} XP added`
-                          : "Already in your DexE"}
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-black/65">
-                        {result.kind === "new"
-                          ? "Fresh catch confirmed. This species is now part of your collection."
-                          : "You already logged this species, so no extra XP was awarded this time."}
-                      </p>
+                    <div 
+                      className="w-full max-w-[280px] aspect-[3/4] relative cursor-pointer"
+                      style={{ perspective: 1000 }}
+                      onClick={() => setIsFlipped(!isFlipped)}
+                    >
+                      <motion.div 
+                        className="w-full h-full relative"
+                        animate={{ rotateY: isFlipped ? 180 : 0, ...getRarityAnimation(result.card.rarity) }}
+                        transition={{ rotateY: { duration: 0.6, type: "spring", stiffness: 260, damping: 20 } }}
+                        style={{ transformStyle: "preserve-3d" }}
+                      >
+                        {/* Front */}
+                        <div className="absolute inset-0 bg-white rounded-[24px] p-6 flex flex-col border border-black/5 shadow-xl" style={{ backfaceVisibility: "hidden" }}>
+                          <div className="h-32 w-full rounded-[16px] bg-black/5 overflow-hidden mb-4 relative">
+                            {result.card.photoUrl && <img src={result.card.photoUrl} className="w-full h-full object-cover" />}
+                          </div>
+                          <div className="text-[10px] font-bold text-[#2191FB] uppercase tracking-widest mb-2">{result.card.rarity}</div>
+                          <div className="text-2xl font-bold text-[#1A1A1A] leading-tight" style={{ fontFamily: "var(--font-display)" }}>{result.card.commonName}</div>
+                          <div className="text-xs font-medium text-black/50 italic mt-1 line-clamp-1">{result.card.scientificName}</div>
+                          <div className="mt-auto pt-3 flex justify-between items-center border-t border-black/5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-black/40">XP Value</span>
+                            <span className="text-sm font-bold text-[#2191FB]">+{result.xpAwarded}</span>
+                          </div>
+                        </div>
+                        {/* Back */}
+                        <div className="absolute inset-0 bg-[#2191FB] rounded-[24px] p-6 flex flex-col text-white shadow-xl" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+                          <div className="text-xl font-bold mb-4" style={{ fontFamily: "var(--font-display)" }}>Taxonomy</div>
+                          <div className="space-y-3 text-xs">
+                            <div className="flex justify-between"><span className="opacity-70">Kingdom</span><span className="font-bold truncate max-w-[100px] text-right">{result.card.kingdom}</span></div>
+                            <div className="flex justify-between"><span className="opacity-70">Phylum</span><span className="font-bold truncate max-w-[100px] text-right">{result.card.phylum}</span></div>
+                            <div className="flex justify-between"><span className="opacity-70">Class</span><span className="font-bold truncate max-w-[100px] text-right">{result.card.className}</span></div>
+                            <div className="flex justify-between"><span className="opacity-70">Order</span><span className="font-bold truncate max-w-[100px] text-right">{result.card.order}</span></div>
+                            <div className="flex justify-between"><span className="opacity-70">Family</span><span className="font-bold truncate max-w-[100px] text-right">{result.card.family}</span></div>
+                            <div className="flex justify-between"><span className="opacity-70">Genus</span><span className="font-bold truncate max-w-[100px] text-right">{result.card.genus}</span></div>
+                          </div>
+                        </div>
+                      </motion.div>
                     </div>
-                    <button
-                      type="button"
+
+                    <motion.button 
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => {
                         setMode("idle");
                         setCaptureData(null);
                         setResult(null);
-                      }}
-                      className="flex w-full items-center justify-center gap-2 rounded-[24px] border-[3px] border-[#1A1A1A] bg-[#1A1A1A] px-5 py-4 font-[family:var(--font-display)] text-2xl text-white"
+                        setIsFlipped(false);
+                        router.refresh();
+                      }} 
+                      className="mt-8 h-14 w-full max-w-[280px] bg-[#2191FB] text-white text-xl tracking-wide rounded-full shadow-lg shadow-[#2191FB]/20"
+                      style={{ fontFamily: "var(--font-display)" }}
                     >
-                      <Trophy className="h-5 w-5" />
-                      {result.kind === "new" ? "Add to DexE" : "Back"}
-                    </button>
+                      Capture
+                    </motion.button>
                   </>
                 ) : captureFailure ? (
-                  <div className="rounded-[30px] border-[3px] border-[#1A1A1A] bg-white px-5 py-8">
-                    <div className="font-[family:var(--font-display)] text-4xl leading-none">
-                      {captureFailure.kind === "low_confidence"
-                        ? "Couldn't identify this one."
-                        : "Try again."}
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <div className="mb-3 text-4xl text-[#1A1A1A]" style={{ fontFamily: "var(--font-display)" }}>
+                      {captureFailure.kind === "low_confidence" ? "Missed" : "Error"}
                     </div>
-                    <p className="mt-4 text-sm leading-6 text-black/65">
+                    <p className="text-black/60 text-sm font-medium px-6 max-w-[280px]">
                       {captureFailure.message}
                     </p>
-                    <button
-                      type="button"
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
                       onClick={resetCapture}
-                      className="mt-6 w-full rounded-[24px] border-[3px] border-[#1A1A1A] bg-[#FE5F55] px-5 py-4 font-[family:var(--font-display)] text-2xl text-white"
+                      className="mt-8 h-12 px-8 rounded-full bg-[#1A1A1A] text-lg tracking-wide text-white shadow-lg"
+                      style={{ fontFamily: "var(--font-display)" }}
                     >
                       Try Again
-                    </button>
+                    </motion.button>
                   </div>
                 ) : null}
               </div>
-            ) : null}
+            )}
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
 
-function StatBlock({
-  icon,
-  label,
-  value,
-  tint,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  tint: string;
-}) {
-  return (
-    <div className="rounded-[26px] border-[3px] border-[#1A1A1A] bg-white p-4 shadow-[0_14px_24px_rgba(26,26,26,0.08)]">
-      <div
-        className="mb-3 inline-flex rounded-full p-2"
-        style={{ backgroundColor: `${tint}20`, color: tint }}
-      >
-        {icon}
-      </div>
-      <div className="text-xs font-black uppercase tracking-[0.22em] text-black/40">
-        {label}
-      </div>
-      <div className="mt-2 font-[family:var(--font-display)] text-3xl leading-none">
-        {value}
-      </div>
+      {/* Floating Capture Button (Always rendered) */}
+      {(mode === "idle" || mode === "camera") && (
+        <div className="fixed bottom-6 left-[48px] sm:left-[56px] right-0 flex justify-center z-40 pointer-events-none">
+          <motion.button 
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.05 }}
+            onClick={mode === "idle" ? () => setMode("camera") : takeShot} 
+            className="pointer-events-auto h-[80px] w-[80px] bg-[#2191FB] rounded-full flex items-center justify-center text-white shadow-xl shadow-[#2191FB]/30 border-4 border-[#FAFAFF]"
+          >
+            {mode === "idle" ? (
+              <Camera className="h-8 w-8" />
+            ) : (
+              <div className="h-[52px] w-[52px] bg-white rounded-full" />
+            )}
+          </motion.button>
+        </div>
+      )}
+
+      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 }

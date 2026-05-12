@@ -41,7 +41,7 @@ export function SpeciesCard(props: SpeciesCardProps) {
         className="w-full text-left"
       >
         <div
-          className="overflow-hidden rounded-[28px] border-[3px] border-[#1A1A1A] p-3 shadow-[0_14px_25px_rgba(26,26,26,0.12)]"
+          className="overflow-hidden rounded-[28px] border border-black/5 p-3 shadow-md"
           style={{ background: `linear-gradient(180deg, ${secondary}, #fffef8)` }}
         >
           <div className="mb-3 flex items-center justify-between">
@@ -53,7 +53,7 @@ export function SpeciesCard(props: SpeciesCardProps) {
             </span>
             <span className="text-xs font-bold text-black/50">{props.xpValue} XP</span>
           </div>
-          <div className="mb-3 aspect-[1.1/1] overflow-hidden rounded-[22px] border-[3px] border-black/10 bg-white/90 p-3">
+          <div className="mb-3 aspect-[1.1/1] overflow-hidden rounded-[22px] border border-black/5 bg-white/90 p-3 shadow-sm">
             <SpeciesStamp className={props.className} rarity={props.rarity} />
           </div>
           <div className="font-[family:var(--font-display)] text-xl leading-none">
@@ -81,7 +81,7 @@ function CardFace(props: SpeciesCardProps) {
 
   return (
     <div
-      className="overflow-hidden rounded-[34px] border-[4px] border-[#1A1A1A] p-4 shadow-[0_18px_36px_rgba(26,26,26,0.16)]"
+      className="overflow-hidden rounded-[34px] p-4 shadow-[0_18px_36px_rgba(26,26,26,0.16)]"
       style={{
         background: `linear-gradient(180deg, ${tint} 0%, ${tint}99 35%, #1A1A1A 160%)`,
         opacity: props.disabled ? 0.6 : 1,
@@ -96,7 +96,7 @@ function CardFace(props: SpeciesCardProps) {
           {props.xpValue}
         </div>
       </div>
-      <div className="mb-4 aspect-[1.02/0.98] overflow-hidden rounded-[26px] border-[3px] border-white/30 bg-[#fffef8] p-4">
+      <div className="mb-4 aspect-[1.02/0.98] overflow-hidden rounded-[26px] bg-[#fffef8] p-4 shadow-sm">
         <SpeciesStamp className={props.className} rarity={props.rarity} />
       </div>
       <div className="font-[family:var(--font-display)] text-[2rem] leading-[0.9] text-white">
@@ -135,7 +135,7 @@ function CardModal(
             onClick={(event) => event.stopPropagation()}
           >
             <div
-              className="rounded-[34px] border-[4px] border-[#1A1A1A] p-5 text-white shadow-[0_30px_80px_rgba(0,0,0,0.32)]"
+              className="rounded-[34px] border border-white/10 p-5 text-white shadow-[0_30px_80px_rgba(0,0,0,0.32)]"
               style={{
                 background: `linear-gradient(180deg, #191919, ${tint} 160%)`,
               }}

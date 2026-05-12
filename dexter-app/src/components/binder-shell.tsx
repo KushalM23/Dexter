@@ -26,10 +26,9 @@ export function BinderShell({
   const activeIndex = tabs.findIndex((t) => t.slug === activeTab);
 
   return (
-    <div className="flex min-h-screen w-full bg-[#FAFAFF] text-[#1A1A1A]">
-
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-[#FAFAFF] text-[#1A1A1A]">
       {/* Binder Tab Rail */}
-      <div className="relative z-20 flex min-h-screen w-[48px] flex-shrink-0 sm:w-[56px]">
+      <div className="relative z-20 flex h-full w-[48px] flex-shrink-0 sm:w-[56px]">
         {/* Spine — full-height vertical line at the right edge of the rail */}
         <div className="absolute bottom-0 right-0 top-0 z-0 w-[2px] bg-[#1A1A1A]" />
 
@@ -85,7 +84,7 @@ export function BinderShell({
       </div>
 
       {/* Main Content Area */}
-      <div className="relative z-10 flex-1 overflow-y-auto bg-[#FAFAFF]">
+      <div className="relative z-10 flex-1 overflow-y-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={pathname}
@@ -103,32 +102,14 @@ export function BinderShell({
               stiffness: 300,
               damping: 30,
             }}
-            className="mx-auto flex min-h-screen w-full max-w-4xl flex-col"
+            className="mx-auto flex min-h-full w-full max-w-4xl flex-col"
           >
-            <header className="border-b-[2px] border-black/10 px-6 pb-5 pt-12 sm:px-12 sm:pt-16">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div
-                    className="mb-3 h-[6px] w-12 rounded-full"
-                    style={{ backgroundColor: tabTheme[activeTab] }}
-                  />
-                  <h1
-                    className="text-[2.5rem] leading-[0.9] tracking-[-0.04em]"
-                    style={{ fontFamily: "var(--font-display)" }}
-                  >
-                    {title}
-                  </h1>
-                </div>
-                {action}
-              </div>
-            </header>
-            <main className="flex-1 px-6 pb-20 pt-8 sm:px-12">
+            <main className="flex-1 px-6 pb-28 pt-12 sm:px-12 sm:pt-16">
               {children}
             </main>
           </motion.div>
         </AnimatePresence>
       </div>
-
     </div>
   );
 }
