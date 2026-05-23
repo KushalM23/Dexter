@@ -147,7 +147,7 @@ export function HomeIdleState({
             whileTap={{ scale: 0.9 }}
             type="button"
             onClick={onViewDexe}
-            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap px-3 py-2 text-xs font-black tracking-[0.16em] text-theme-accent transition-colors hover:bg-theme-accent/10 rounded-full"
+            className="inline-flex translate-y-1.5 shrink-0 items-center gap-1 whitespace-nowrap px-3 py-2 text-xs font-black tracking-[0.16em] text-theme-accent transition-colors hover:bg-theme-accent/10"
           >
             <ChevronRight className="h-4 w-4" strokeWidth={8} />
           </motion.button>
@@ -205,12 +205,12 @@ function HomeStatRow({
   return (
     <motion.div 
       whileHover={{ scale: 1.02, x: 2 }}
-      className="flex w-full items-center text-black transition-all"
+      className="flex w-full items-center text-theme-accent transition-all"
     >
       <div className="flex shrink-0 items-center gap-2 text-xl uppercase tracking-wide [font-family:var(--font-slackey)]">
         <Icon size={24} strokeWidth={3} /> {label}
       </div>
-      <div className="mx-4 flex-1 border-b-4 border-dotted border-theme-accent" />
+      <div className="mx-4 flex-1 border-b-4 border-dotted border-black" />
       <div className="shrink-0 text-3xl text-theme-accent font-medium [font-family:var(--font-display)]">
         {value}
       </div>
