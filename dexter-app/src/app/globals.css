@@ -155,35 +155,35 @@ select {
 .display-title {
   font-family: var(--font-display), sans-serif;
   font-size: clamp(2rem, 4vw, 3.2rem);
-  line-height: 0.92;
+  line-height: 1;
   letter-spacing: 0.05em;
 }
 
 .display-title-sm {
   font-family: var(--font-display), sans-serif;
   font-size: 1.8rem;
-  line-height: 0.92;
+  line-height: 1;
   letter-spacing: 0.05em;
 }
 
 .display-title-xs {
   font-family: var(--font-display), sans-serif;
   font-size: 1.35rem;
-  line-height: 0.94;
+  line-height: 1;
   letter-spacing: 0.04em;
 }
 
 .display-hero {
   font-family: var(--font-display), sans-serif;
   font-size: clamp(2.25rem, 4vw, 2.75rem);
-  line-height: 0.92;
+  line-height: 1;
   letter-spacing: 0.04em;
 }
 
 .display-section {
   font-family: var(--font-display), sans-serif;
   font-size: clamp(1.5rem, 3vw, 2rem);
-  line-height: 0.95;
+  line-height: 1;
   letter-spacing: 0.04em;
 }
 
