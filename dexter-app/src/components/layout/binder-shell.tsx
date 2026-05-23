@@ -36,7 +36,7 @@ export function BinderShell({
       <div className="relative z-20 flex h-full w-12 shrink-0 sm:w-14">
         <div className="absolute inset-y-0 right-0 z-0 w-0.5 bg-border-strong" />
 
-        <nav className="absolute inset-x-0 top-[12%] z-10 flex flex-col">
+        <nav className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex flex-col">
           {tabs.map((tab, index) => {
             const active = tab.slug === activeTab;
             const tabTheme = tabThemeConfig[tab.slug];
@@ -58,7 +58,7 @@ export function BinderShell({
                     backgroundColor: active
                       ? "var(--background)"
                       : tabTheme.accent,
-                    height: active ? 120 : 100,
+                    height: active ? 160 : 140,
                     boxShadow: active
                       ? "none"
                       : "inset -4px 0 6px -3px rgba(0,0,0,0.1)",
@@ -71,7 +71,7 @@ export function BinderShell({
                       color: active ? tabTheme.accent : "var(--surface)",
                       writingMode: "vertical-rl",
                       transform: "rotate(180deg)",
-                      fontSize: active ? "0.75rem" : "0.65rem",
+                      fontSize: active ? "1rem" : "0.875rem",
                       letterSpacing: "0.08em",
                       textShadow: active
                         ? "none"
