@@ -1,14 +1,31 @@
 import type { Metadata } from "next";
-import { Lilita_One, Nunito } from "next/font/google";
+import {
+  Slackey,
+  Press_Start_2P,
+  Bricolage_Grotesque,
+  Titan_One,
+} from "next/font/google";
 import "./globals.css";
 
-const displayFont = Lilita_One({
+const displayFont = Titan_One({
   variable: "--font-display",
   weight: "400",
   subsets: ["latin"],
 });
 
-const bodyFont = Nunito({
+const slackeyFont = Slackey({
+  variable: "--font-slackey",
+  weight: "400",
+  subsets: ["latin"],
+});
+
+const pixelFont = Press_Start_2P({
+  variable: "--font-pixel",
+  weight: "400",
+  subsets: ["latin"],
+});
+
+const bodyFont = Bricolage_Grotesque({
   variable: "--font-body",
   subsets: ["latin"],
 });
@@ -27,9 +44,12 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${displayFont.variable} ${bodyFont.variable} h-full antialiased`}
+      className={`${displayFont.variable} ${slackeyFont.variable} ${pixelFont.variable} ${bodyFont.variable} h-full antialiased`}
     >
-      <body suppressHydrationWarning className="min-h-full flex flex-col">
+      <body
+        suppressHydrationWarning
+        className="min-h-full flex flex-col font-sans"
+      >
         {children}
       </body>
     </html>

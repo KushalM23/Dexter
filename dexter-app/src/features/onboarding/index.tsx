@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, ArrowRight, ArrowLeft } from "lucide-react";
 
-import { AvatarBadge, avatarOptions } from "@/components/illustrations";
+import { AvatarBadge, avatarOptions } from "@/components/ui/illustrations";
 
 export function OnboardingScreen({
   friendCode,
@@ -52,8 +52,8 @@ export function OnboardingScreen({
         >
           {/* Step indicator */}
           <div className="mb-6 flex items-center gap-3">
-            <div className="h-[6px] flex-1 rounded-full bg-white" />
-            <div className="h-[6px] flex-1 rounded-full bg-white/30" />
+            <div className="h-1.5 flex-1 rounded-full bg-white" />
+            <div className="h-1.5 flex-1 rounded-full bg-white/30" />
           </div>
 
           {/* Header */}
@@ -66,7 +66,7 @@ export function OnboardingScreen({
               Step 1 of 2
             </div>
             <h1
-              className="text-[2.8rem] leading-[0.9] tracking-[-0.03em]"
+              className="display-title leading-[0.9] tracking-[-0.03em]"
               style={{ fontFamily: "var(--font-display)" }}
             >
               Pick your
@@ -152,8 +152,8 @@ export function OnboardingScreen({
         >
           {/* Step indicator */}
           <div className="mb-6 flex items-center gap-3">
-            <div className="h-[6px] flex-1 rounded-full bg-white/30" />
-            <div className="h-[6px] flex-1 rounded-full bg-white" />
+            <div className="h-1.5 flex-1 rounded-full bg-white/30" />
+            <div className="h-1.5 flex-1 rounded-full bg-white" />
           </div>
 
           {/* Header */}
@@ -166,10 +166,10 @@ export function OnboardingScreen({
               Step 2 of 2
             </div>
             <h1
-              className="text-[2.8rem] leading-[0.9] tracking-[-0.03em]"
+              className="display-title leading-[0.9] tracking-[-0.03em]"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              Welcome to
+              Welcome
               <br />
               Dexter.
             </h1>

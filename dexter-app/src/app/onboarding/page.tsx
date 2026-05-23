@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { OnboardingScreen } from "@/components/onboarding-screen";
+import { OnboardingScreen } from "@/features/onboarding";
 import { requireUser } from "@/lib/session";
 
 export default async function OnboardingPage() {

@@ -1,10 +1,12 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
-import { tabs, tabTheme } from "@/lib/constants";
+import { tabThemeConfig, tabs } from "@/lib/constants";
+import { getThemeStyle } from "@/lib/theme";
 import type { TabSlug } from "@/lib/types";
 
 function pathForTab(slug: TabSlug) {
@@ -19,24 +21,25 @@ export function BinderShell({
 }: {
   activeTab: TabSlug;
   title: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
 }) {
   const pathname = usePathname();
-  const activeIndex = tabs.findIndex((t) => t.slug === activeTab);
+  const activeIndex = tabs.findIndex((tab) => tab.slug === activeTab);
+  const activeTheme = tabThemeConfig[activeTab];
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-[#FAFAFF] text-[#1A1A1A]">
-      {/* Binder Tab Rail */}
-      <div className="relative z-20 flex h-full w-[48px] flex-shrink-0 sm:w-[56px]">
-        {/* Spine — full-height vertical line at the right edge of the rail */}
-        <div className="absolute bottom-0 right-0 top-0 z-0 w-[2px] bg-[#1A1A1A]" />
+    <div
+      className="theme-scope flex h-[100dvh] w-full overflow-hidden bg-background text-foreground"
+      style={getThemeStyle(activeTheme)}
+    >
+      <div className="relative z-20 flex h-full w-12 shrink-0 sm:w-14">
+        <div className="absolute inset-y-0 right-0 z-0 w-0.5 bg-border-strong" />
 
-        {/* Tab stack */}
-        <nav className="absolute left-0 right-0 top-[12%] z-10 flex flex-col">
+        <nav className="absolute inset-x-0 top-[12%] z-10 flex flex-col">
           {tabs.map((tab, index) => {
             const active = tab.slug === activeTab;
-            const tabColor = tabTheme[tab.slug];
+            const tabTheme = tabThemeConfig[tab.slug];
 
             return (
               <Link
@@ -45,16 +48,17 @@ export function BinderShell({
                 className="pointer-events-auto relative block focus:outline-none"
                 style={{
                   zIndex: active ? 30 : 10,
-                  marginTop: index !== 0 ? -2 : 0,
+                  marginTop: index === 0 ? 0 : -2,
                 }}
               >
                 <div
-                  className="flex items-center justify-center transition-all duration-200 ease-out"
+                  className="binder-rail-tab"
+                  data-active={active}
                   style={{
-                    backgroundColor: active ? "#FAFAFF" : tabColor,
+                    backgroundColor: active
+                      ? "var(--background)"
+                      : tabTheme.accent,
                     height: active ? 120 : 100,
-                    border: "2px solid #1A1A1A",
-                    borderRight: active ? "none" : "2px solid #1A1A1A",
                     boxShadow: active
                       ? "none"
                       : "inset -4px 0 6px -3px rgba(0,0,0,0.1)",
@@ -64,7 +68,7 @@ export function BinderShell({
                     className="select-none transition-colors duration-200"
                     style={{
                       fontFamily: "var(--font-display)",
-                      color: active ? tabColor : "#FFFFFF",
+                      color: active ? tabTheme.accent : "var(--surface)",
                       writingMode: "vertical-rl",
                       transform: "rotate(180deg)",
                       fontSize: active ? "0.75rem" : "0.65rem",
@@ -83,7 +87,6 @@ export function BinderShell({
         </nav>
       </div>
 
-      {/* Main Content Area */}
       <div className="relative z-10 flex-1 overflow-y-auto">
         <AnimatePresence mode="wait">
           <motion.div
@@ -104,9 +107,7 @@ export function BinderShell({
             }}
             className="mx-auto flex min-h-full w-full max-w-4xl flex-col"
           >
-            <main className="flex-1 px-6 pb-28 pt-12 sm:px-12 sm:pt-16">
-              {children}
-            </main>
+            <main className="flex-1 px-4 py-8">{children}</main>
           </motion.div>
         </AnimatePresence>
       </div>

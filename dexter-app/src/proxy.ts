@@ -10,8 +10,12 @@ import type { NextRequest } from "next/server";
  * rendering and CAN write cookies, so it is the correct place to keep
  * the session alive and clear stale tokens.
  */
-export async function middleware(request: NextRequest) {
-  const response = NextResponse.next({ request });
+export async function proxy(request: NextRequest) {
+  const response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -25,7 +29,9 @@ export async function middleware(request: NextRequest) {
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+      setAll(
+        cookiesToSet: { name: string; value: string; options: CookieOptions }[],
+      ) {
         for (const { name, value, options } of cookiesToSet) {
           request.cookies.set(name, value);
           response.cookies.set(name, value, options);

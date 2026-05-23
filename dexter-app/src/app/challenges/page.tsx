@@ -1,5 +1,6 @@
-import { BinderShell } from "@/components/binder-shell";
-import { ChallengesScreen } from "@/components/challenges-screen";
+import { BinderShell } from "@/components/layout/binder-shell";
+import { TabActionBadge } from "@/components/ui/screen-primitives";
+import { ChallengesScreen } from "@/features/challenges";
 import { getChallengesData } from "@/lib/domain";
 import { requireOnboardedUser } from "@/lib/session";
 
@@ -12,9 +13,7 @@ export default async function ChallengesPage() {
       activeTab="challenges"
       title="Challenges"
       action={
-        <div className="rounded-full bg-[#EAF9ED] px-3 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#1FC147]">
-          3 daily
-        </div>
+        <TabActionBadge>3 daily</TabActionBadge>
       }
     >
       <ChallengesScreen data={data} />

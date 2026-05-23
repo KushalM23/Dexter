@@ -1,5 +1,6 @@
-import { BinderShell } from "@/components/binder-shell";
-import { HomeScreen } from "@/components/home-screen";
+import { BinderShell } from "@/components/layout/binder-shell";
+import { TabActionBadge } from "@/components/ui/screen-primitives";
+import { HomeScreen } from "@/features/home";
 import { getHomeData } from "@/lib/domain";
 import { requireOnboardedUser } from "@/lib/session";
 
@@ -12,9 +13,7 @@ export default async function HomePage() {
       activeTab="home"
       title="Capture"
       action={
-        <div className="rounded-full bg-[#E7F4FF] px-3 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#2191FB]">
-          {data.totalCards} caught
-        </div>
+        <TabActionBadge>{data.totalCards} caught</TabActionBadge>
       }
     >
       <HomeScreen data={data} />

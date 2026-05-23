@@ -1,5 +1,6 @@
-import { BinderShell } from "@/components/binder-shell";
-import { LeaderboardScreen } from "@/components/leaderboard-screen";
+import { BinderShell } from "@/components/layout/binder-shell";
+import { TabActionBadge } from "@/components/ui/screen-primitives";
+import { LeaderboardScreen } from "@/features/leaderboard";
 import { getLeaderboardData } from "@/lib/domain";
 import { requireOnboardedUser } from "@/lib/session";
 
@@ -14,9 +15,7 @@ export default async function LeaderboardPage() {
       activeTab="leaderboard"
       title="Leaderboard"
       action={
-        <div className="rounded-full bg-[#FFF7BF] px-3 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#7A5C00]">
-          Global XP
-        </div>
+        <TabActionBadge>Global XP</TabActionBadge>
       }
     >
       <LeaderboardScreen

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
-import { DexterEyes } from "@/components/illustrations";
+import { DexterEyes } from "@/components/ui/illustrations";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function AuthScreen() {
@@ -51,7 +51,7 @@ export function AuthScreen() {
       >
         {/* App name */}
         <h1
-          className="text-[4rem] leading-[0.85] tracking-[-0.04em] text-white"
+          className="text-6xl leading-[0.85] tracking-[-0.04em] text-white"
           style={{ fontFamily: "var(--font-display)" }}
         >
           Your World
@@ -60,7 +60,7 @@ export function AuthScreen() {
         </h1>
 
         {/* Tagline */}
-        <p className="mt-5 max-w-[280px] text-base leading-relaxed text-white/90">
+        <p className="mt-5 max-w-72 text-base leading-relaxed text-white/90">
           Snap real animals, plants, and organisms. Dexter turns every sighting
           into a collectible field card.
         </p>
@@ -89,7 +89,7 @@ export function AuthScreen() {
           className="flex w-full cursor-pointer items-center justify-between rounded-2xl bg-[#1A1A1A] px-6 py-5 text-left text-white transition-transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70"
         >
           <div>
-            <div className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-white/50">
+            <div className="text-xs font-bold uppercase tracking-[0.22em] text-white/50">
               Sign in with
             </div>
             <div

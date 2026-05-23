@@ -12,6 +12,7 @@ import {
 import type { SupabaseClient, User as SupabaseUser } from "@supabase/supabase-js";
 
 import { rarityColors, rarityOrder, rarityXp } from "@/lib/constants";
+import { generatePixelArtImage, isPixelArtConfigured } from "@/lib/pixel-art";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import type {
   CaptureFailurePayload,
@@ -55,6 +56,7 @@ type DbSpeciesCardRow = {
   rarity: Rarity;
   xp_value: number;
   photo_url: string | null;
+  pixel_art_url: string | null;
   photo_source: "inaturalist" | "gbif" | "wikipedia" | "silhouette";
   lore: string | null;
   occurrence_count: number;
@@ -98,16 +100,8 @@ type DbChallengeProgressRow = {
   expires_at: string | null;
 };
 
-const invalidMessages: Record<CaptureRejectReason, string> = {
-  photo_of_screen:
-    "That looks like a screen, not a real field capture. Try spotting the real thing outdoors.",
-  illustration:
-    "That looks illustrated rather than photographed. Try a real creature or plant in natural light.",
-  no_organism:
-    "No animal or plant detected in this photo.",
-  toy_or_statue:
-    "Nice try, but props and statues do not count as wild captures.",
-};
+const INVALID_CAPTURE_MESSAGE =
+  "We could not verify a real plant or animal in this shot. Try again with a clear photo in natural light.";
 
 function mapUserRow(row: DbUserRow): UserRecord {
   return {
@@ -140,6 +134,7 @@ function mapSpeciesCardRow(row: DbSpeciesCardRow): SpeciesCardRecord {
     rarity: row.rarity,
     xpValue: row.xp_value,
     photoUrl: row.photo_url ?? "",
+    pixelArtUrl: row.pixel_art_url ?? "",
     photoSource: row.photo_source,
     lore: row.lore ?? "",
     occurrenceCount: row.occurrence_count,
@@ -592,6 +587,34 @@ interface ResolvedSpecies {
   occurrenceCount: number;
 }
 
+async function maybeGeneratePixelArt(
+  commonName: string,
+  scientificName: string,
+) {
+  if (!isPixelArtConfigured()) {
+    return "";
+  }
+
+  try {
+    console.log(`[PixelArt] 🎨 Generating pixel art for "${commonName}"...`);
+    const imageUrl = await generatePixelArtImage({ commonName, scientificName });
+
+    if (imageUrl) {
+      console.log(`[PixelArt] ✅ Generated pixel art: ${imageUrl.slice(0, 80)}...`);
+    } else {
+      console.log("[PixelArt] ⚠️ Provider returned no image URL");
+    }
+
+    return imageUrl;
+  } catch (error) {
+    console.error(
+      "[PixelArt] ❌ Generation failed:",
+      error instanceof Error ? error.message : error,
+    );
+    return "";
+  }
+}
+
 async function resolveSpeciesFromAPIs(
   commonName: string,
   scientificName: string,
@@ -659,11 +682,37 @@ async function ensureSpeciesCard(
   }
 
   if (existing) {
-    return mapSpeciesCardRow(existing as DbSpeciesCardRow);
+    const existingRow = existing as DbSpeciesCardRow;
+
+    if (!existingRow.pixel_art_url) {
+      const pixelArtUrl = await maybeGeneratePixelArt(
+        existingRow.common_name,
+        existingRow.scientific_name,
+      );
+
+      if (pixelArtUrl) {
+        const { error: updateError } = await supabase
+          .from("species_cards")
+          .update({ pixel_art_url: pixelArtUrl })
+          .eq("id", existingRow.id);
+
+        if (updateError) {
+          console.error("[PixelArt] ❌ Failed to save generated art:", updateError);
+        } else {
+          existingRow.pixel_art_url = pixelArtUrl;
+        }
+      }
+    }
+
+    return mapSpeciesCardRow(existingRow);
   }
 
   // Determine base rarity from occurrence for the card record
   const baseRarity = getRarityFromOccurrence(resolved.occurrenceCount);
+  const pixelArtUrl = await maybeGeneratePixelArt(
+    resolved.commonName,
+    resolved.scientificName,
+  );
 
   // Insert new species card
   const { data: inserted, error: insertError } = await supabase
@@ -682,6 +731,7 @@ async function ensureSpeciesCard(
       rarity: baseRarity,
       xp_value: rarityXp[baseRarity],
       photo_url: resolved.photoUrl || null,
+      pixel_art_url: pixelArtUrl || null,
       photo_source: resolved.photoSource,
       lore: resolved.lore || null,
       occurrence_count: resolved.occurrenceCount,
@@ -1740,7 +1790,7 @@ export async function processCapture(
       return {
         kind: "invalid",
         reason: analysis.reason,
-        message: invalidMessages[analysis.reason],
+        message: INVALID_CAPTURE_MESSAGE,
       };
     }
 

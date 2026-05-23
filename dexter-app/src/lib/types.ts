@@ -49,6 +49,7 @@ export interface SpeciesCardRecord {
   rarity: Rarity;
   xpValue: number;
   photoUrl: string;
+  pixelArtUrl: string;
   photoSource: PhotoSource;
   lore: string;
   occurrenceCount: number;

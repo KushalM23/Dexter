@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS public.species_cards (
   rarity rarity NOT NULL,
   xp_value integer NOT NULL,
   photo_url text,
+  pixel_art_url text,
   photo_source photo_source NOT NULL DEFAULT 'silhouette',
   lore text,
   occurrence_count integer NOT NULL,

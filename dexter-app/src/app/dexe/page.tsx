@@ -1,5 +1,6 @@
-import { BinderShell } from "@/components/binder-shell";
-import { CollectionScreen } from "@/components/collection-screen";
+import { BinderShell } from "@/components/layout/binder-shell";
+import { TabActionBadge } from "@/components/ui/screen-primitives";
+import { CollectionScreen } from "@/features/collection";
 import { getCollectionData } from "@/lib/domain";
 import { requireOnboardedUser } from "@/lib/session";
 
@@ -12,9 +13,7 @@ export default async function DexePage() {
       activeTab="dexe"
       title="DexE"
       action={
-        <div className="rounded-full bg-[#FFE6E3] px-3 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#FE5F55]">
-          {items.length} caught
-        </div>
+        <TabActionBadge>{items.length} caught</TabActionBadge>
       }
     >
       <CollectionScreen items={items} />
