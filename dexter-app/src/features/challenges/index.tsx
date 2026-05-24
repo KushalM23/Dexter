@@ -24,6 +24,7 @@ type ChallengeEntry = {
     progress: number;
     completed: boolean;
     completedAt: string | null;
+    assignedAt: string;
     expiresAt: string | null;
   };
 };
@@ -122,7 +123,10 @@ function ChallengeSection({
                 title === "Achievements" && !item.progress.completed;
 
               return (
-                <div key={item.challenge.id} className="space-y-3">
+                <div
+                  key={`${item.challenge.id}-${item.progress.expiresAt ?? item.progress.assignedAt ?? "permanent"}`}
+                  className="space-y-3"
+                >
                   <SectionDivider />
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">

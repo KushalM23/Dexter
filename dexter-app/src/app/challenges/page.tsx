@@ -13,7 +13,7 @@ export default async function ChallengesPage() {
       activeTab="challenges"
       title="Challenges"
       action={
-        <TabActionBadge>3 daily</TabActionBadge>
+        <TabActionBadge>5 daily</TabActionBadge>
       }
     >
       <ChallengesScreen data={data} />

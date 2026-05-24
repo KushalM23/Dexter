@@ -11,6 +11,7 @@ import {
 } from "date-fns";
 import type { SupabaseClient, User as SupabaseUser } from "@supabase/supabase-js";
 
+import { challengeCatalog } from "@/lib/challenge-catalog";
 import { rarityColors, rarityOrder, rarityXp } from "@/lib/constants";
 import { generatePixelArtImage, isPixelArtConfigured } from "@/lib/pixel-art";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
@@ -103,6 +104,30 @@ type DbChallengeProgressRow = {
 const INVALID_CAPTURE_MESSAGE =
   "We could not verify a real plant or animal in this shot. Try again with a clear photo in natural light.";
 
+async function ensureChallengeTemplates(supabase: SupabaseClient) {
+  const seedRows: DbChallengeRow[] = challengeCatalog.map((challenge) => ({
+    id: challenge.id,
+    title: challenge.title,
+    description: challenge.description,
+    type: challenge.type,
+    environment_type: challenge.environmentType,
+    xp_reward: challenge.xpReward,
+    target_count: challenge.targetCount,
+    condition_type: challenge.conditionType,
+  }));
+
+  const { data: insertedRows, error: seedError } = await supabase
+    .from("challenges")
+    .upsert(seedRows, { onConflict: "id" })
+    .select("*");
+
+  if (seedError) {
+    throw seedError;
+  }
+
+  return ((insertedRows ?? seedRows) as DbChallengeRow[]).map((row) => row);
+}
+
 function mapUserRow(row: DbUserRow): UserRecord {
   return {
     id: row.id,
@@ -187,8 +212,93 @@ function mapChallengeProgressRow(
   };
 }
 
-function uid(prefix: string) {
-  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+type ChallengeProgressEntry = {
+  progress: UserChallengeProgressRecord;
+  challenge: ChallengeTemplateRecord;
+};
+
+const currentChallengeIds = new Set(challengeCatalog.map((challenge) => challenge.id));
+
+function challengeProgressGroupKey(progress: UserChallengeProgressRecord) {
+  return `${progress.challengeId}:${progress.expiresAt ?? "permanent"}`;
+}
+
+function pickPreferredChallengeProgress(
+  left: UserChallengeProgressRecord,
+  right: UserChallengeProgressRecord,
+) {
+  if (left.completed !== right.completed) {
+    return left.completed ? left : right;
+  }
+
+  if (left.progress !== right.progress) {
+    return left.progress > right.progress ? left : right;
+  }
+
+  return new Date(left.assignedAt).getTime() <= new Date(right.assignedAt).getTime()
+    ? left
+    : right;
+}
+
+function pickEarlierDateString(left: string | null, right: string | null) {
+  if (!left) return right;
+  if (!right) return left;
+  return new Date(left).getTime() <= new Date(right).getTime() ? left : right;
+}
+
+function pickEarlierRequiredDateString(left: string, right: string) {
+  return new Date(left).getTime() <= new Date(right).getTime() ? left : right;
+}
+
+function dedupeChallengeProgressRecords(records: UserChallengeProgressRecord[]) {
+  const uniqueRecords = new Map<string, UserChallengeProgressRecord>();
+
+  for (const record of records) {
+    const key = challengeProgressGroupKey(record);
+    const existing = uniqueRecords.get(key);
+
+    if (!existing) {
+      uniqueRecords.set(key, record);
+      continue;
+    }
+
+    const preferred = pickPreferredChallengeProgress(existing, record);
+
+    uniqueRecords.set(key, {
+      ...preferred,
+      progress: Math.max(existing.progress, record.progress),
+      completed: existing.completed || record.completed,
+      completedAt: pickEarlierDateString(existing.completedAt, record.completedAt),
+      assignedAt: pickEarlierRequiredDateString(existing.assignedAt, record.assignedAt),
+      expiresAt: existing.expiresAt ?? record.expiresAt,
+    });
+  }
+
+  return Array.from(uniqueRecords.values());
+}
+
+function dedupeChallengeProgressEntries(entries: ChallengeProgressEntry[]) {
+  const challengeById = new Map(
+    entries.map((entry) => [entry.challenge.id, entry.challenge] as const),
+  );
+
+  return dedupeChallengeProgressRecords(entries.map((entry) => entry.progress))
+    .map((progress) => {
+      const challenge = challengeById.get(progress.challengeId);
+      if (!challenge) {
+        return null;
+      }
+
+      return {
+        progress,
+        challenge,
+      };
+    })
+    .filter((entry): entry is ChallengeProgressEntry => Boolean(entry));
+}
+
+function currentLevelFromXp(totalXp: number) {
+  return Math.floor(totalXp / 500) + 1;
 }
 
 async function generateFriendCode(supabase: SupabaseClient) {
@@ -1048,7 +1158,6 @@ async function awardXp(
   }
 
   await supabase.from("xp_events").insert({
-    id: uid("xp"),
     user_id: userId,
     source,
     amount,
@@ -1075,32 +1184,31 @@ function nextUtcMonday(reference: Date) {
   return next.toISOString();
 }
 
-function chooseChallenges(
+function isCurrentTimedChallenge(progress: UserChallengeProgressRecord, now: Date) {
+  return Boolean(progress.expiresAt && new Date(progress.expiresAt) > now);
+}
+
+function missingChallengesForWindow(
   templates: ChallengeTemplateRecord[],
+  progressItems: UserChallengeProgressRecord[],
+  templateById: Map<string, ChallengeTemplateRecord>,
   type: "daily" | "weekly",
-  environmentType: EnvironmentType,
+  now: Date,
 ) {
-  return templates
-    .filter(
-      (challenge) =>
-        challenge.type === type &&
-        (challenge.environmentType === "any" ||
-          challenge.environmentType === environmentType),
-    )
-    .slice(0, 3);
+  const currentWindow = progressItems.filter((progress) => {
+    const challenge = templateById.get(progress.challengeId);
+    return challenge?.type === type && isCurrentTimedChallenge(progress, now);
+  });
+  const existingIds = new Set(currentWindow.map((progress) => progress.challengeId));
+
+  return templates.filter(
+    (challenge) => challenge.type === type && !existingIds.has(challenge.id),
+  );
 }
 
 async function ensureChallenges(supabase: SupabaseClient, user: UserRecord) {
   const now = new Date();
-  const { data: templateRows, error: templateError } = await supabase
-    .from("challenges")
-    .select("*");
-
-  if (templateError) {
-    throw templateError;
-  }
-
-  const templateList = (templateRows ?? []) as DbChallengeRow[];
+  const templateList = await ensureChallengeTemplates(supabase);
   const challenges = templateList.map((row) => mapChallengeRow(row));
 
   if (challenges.length === 0) {
@@ -1119,81 +1227,71 @@ async function ensureChallenges(supabase: SupabaseClient, user: UserRecord) {
   const progressItems = ((progressRows ?? []) as DbChallengeProgressRow[]).map((row) =>
     mapChallengeProgressRow(row),
   );
+  const uniqueProgressItems = dedupeChallengeProgressRecords(progressItems);
   const templateById = new Map<string, ChallengeTemplateRecord>(
     challenges.map((challenge) => [challenge.id, challenge]),
   );
 
-  const needsDaily = !progressItems.some((progress) => {
-    const challenge = templateById.get(progress.challengeId);
-    return (
-      challenge?.type === "daily" &&
-      progress.expiresAt &&
-      new Date(progress.expiresAt) > now
-    );
-  });
-
-  const needsWeekly = !progressItems.some((progress) => {
-    const challenge = templateById.get(progress.challengeId);
-    return (
-      challenge?.type === "weekly" &&
-      progress.expiresAt &&
-      new Date(progress.expiresAt) > now
-    );
-  });
-
-  const hasAchievements = progressItems.some((progress) => {
-    const challenge = templateById.get(progress.challengeId);
-    return challenge?.type === "achievement";
-  });
-
   const inserts: Array<Partial<DbChallengeProgressRow>> = [];
 
-  if (needsDaily) {
-    chooseChallenges(challenges, "daily", user.environmentType).forEach((challenge) => {
+  missingChallengesForWindow(
+    challenges,
+    uniqueProgressItems,
+    templateById,
+    "daily",
+    now,
+  ).forEach((challenge) => {
+    inserts.push({
+      user_id: user.id,
+      challenge_id: challenge.id,
+      progress: 0,
+      completed: false,
+      completed_at: null,
+      assigned_at: now.toISOString(),
+      expires_at: nextUtcMidnight(now),
+    });
+  });
+
+  missingChallengesForWindow(
+    challenges,
+    uniqueProgressItems,
+    templateById,
+    "weekly",
+    now,
+  ).forEach((challenge) => {
+    inserts.push({
+      user_id: user.id,
+      challenge_id: challenge.id,
+      progress: 0,
+      completed: false,
+      completed_at: null,
+      assigned_at: now.toISOString(),
+      expires_at: nextUtcMonday(now),
+    });
+  });
+
+  const achievementIds = new Set(
+    uniqueProgressItems
+      .filter((progress) => templateById.get(progress.challengeId)?.type === "achievement")
+      .map((progress) => progress.challengeId),
+  );
+
+  challenges
+    .filter(
+      (challenge) =>
+        challenge.type === "achievement" && !achievementIds.has(challenge.id),
+    )
+    .forEach((challenge) => {
       inserts.push({
-        id: uid("challenge-progress"),
         user_id: user.id,
         challenge_id: challenge.id,
         progress: 0,
         completed: false,
         completed_at: null,
         assigned_at: now.toISOString(),
-        expires_at: nextUtcMidnight(now),
+        expires_at: null,
       });
     });
-  }
-
-  if (needsWeekly) {
-    chooseChallenges(challenges, "weekly", user.environmentType).forEach((challenge) => {
-      inserts.push({
-        id: uid("challenge-progress"),
-        user_id: user.id,
-        challenge_id: challenge.id,
-        progress: 0,
-        completed: false,
-        completed_at: null,
-        assigned_at: now.toISOString(),
-        expires_at: nextUtcMonday(now),
-      });
-    });
-  }
-
-  if (!hasAchievements) {
-    challenges
-      .filter((challenge) => challenge.type === "achievement")
-      .forEach((challenge) => {
-        inserts.push({
-          id: uid("challenge-progress"),
-          user_id: user.id,
-          challenge_id: challenge.id,
-          progress: 0,
-          completed: false,
-          completed_at: null,
-          assigned_at: now.toISOString(),
-          expires_at: null,
-        });
-      });
-  }
 
   if (inserts.length > 0) {
     const { error } = await supabase.from("user_challenge_progress").insert(inserts);
@@ -1211,6 +1309,7 @@ function progressMatchesChallenge(
   collections: UserCollectionRecord[],
   challenge: ChallengeTemplateRecord,
   cardLookup: Map<string, SpeciesCardRecord>,
+  currentLevel: number,
 ) {
   if (conditionType === "capture_any") {
     return Math.min(collections.length, challenge.targetCount);
@@ -1231,23 +1330,41 @@ function progressMatchesChallenge(
 
   if (conditionType.startsWith("capture_class:")) {
     const target = conditionType.split(":")[1];
-    return card.className === target ? 1 : 0;
+    return collections.filter((entry) => {
+      const className =
+        entry.id === collection.id
+          ? card.className
+          : cardLookup.get(entry.speciesCardId)?.className;
+      return className === target;
+    }).length;
   }
 
   if (conditionType.startsWith("capture_rarity_min:")) {
     const target = conditionType.split(":")[1] as Rarity;
-    return rarityIndex(collection.rarity) >= rarityIndex(target) ? 1 : 0;
+    return collections.filter(
+      (entry) => rarityIndex(entry.rarity) >= rarityIndex(target),
+    ).length;
   }
 
   if (conditionType.startsWith("capture_rarity_exact:")) {
     const target = conditionType.split(":")[1] as Rarity;
-    return collection.rarity === target ? 1 : 0;
+    return collections.filter((entry) => entry.rarity === target).length;
   }
 
   if (conditionType === "collect_all_rarities") {
     const rarities = new Set(collections.map((entry) => entry.rarity));
     rarities.add(collection.rarity);
     return rarities.size;
+  }
+
+  if (conditionType.startsWith("reach_level:")) {
+    const target = Number(conditionType.split(":")[1]);
+
+    if (Number.isNaN(target)) {
+      return 0;
+    }
+
+    return Math.min(currentLevel, challenge.targetCount);
   }
 
   return 0;
@@ -1266,6 +1383,16 @@ async function applyChallengeProgress(
 
   if (error) {
     throw error;
+  }
+
+  const { data: userXpRow, error: userXpError } = await supabase
+    .from("users")
+    .select("total_xp")
+    .eq("id", userId)
+    .single();
+
+  if (userXpError) {
+    throw userXpError;
   }
 
   const { data: collectionRows, error: collectionError } = await supabase
@@ -1306,17 +1433,45 @@ async function applyChallengeProgress(
   const progressRowList = (progressRows ?? []) as Array<
     DbChallengeProgressRow & { challenge: DbChallengeRow | null }
   >;
+  const progressEntries = dedupeChallengeProgressEntries(
+    progressRowList
+      .map((row) => {
+        const challenge = row.challenge;
+        if (!challenge || !currentChallengeIds.has(challenge.id)) {
+          return null;
+        }
 
-  for (const row of progressRowList) {
-    const challengeRow = row.challenge;
+        return {
+          progress: mapChallengeProgressRow(row),
+          challenge: mapChallengeRow(challenge),
+        };
+      })
+      .filter((entry): entry is ChallengeProgressEntry => Boolean(entry)),
+  ).sort((left, right) => {
+    const leftPriority =
+      left.challenge.type === "achievement"
+        ? left.challenge.conditionType.startsWith("reach_level:")
+          ? 2
+          : 1
+        : 0;
+    const rightPriority =
+      right.challenge.type === "achievement"
+        ? right.challenge.conditionType.startsWith("reach_level:")
+          ? 2
+          : 1
+        : 0;
 
-    if (!challengeRow) {
-      continue;
+    if (leftPriority !== rightPriority) {
+      return leftPriority - rightPriority;
     }
 
-    const progress = mapChallengeProgressRow(row as DbChallengeProgressRow);
-    const challenge = mapChallengeRow(challengeRow);
+    return left.challenge.targetCount - right.challenge.targetCount;
+  });
+  let completedChallenge = false;
+  let currentTotalXp = userXpRow.total_xp ?? 0;
+  let currentLevel = currentLevelFromXp(currentTotalXp);
 
+  for (const { progress, challenge } of progressEntries) {
     if (progress.completed) {
       continue;
     }
@@ -1325,13 +1480,23 @@ async function applyChallengeProgress(
       continue;
     }
 
+    const relevantCollections =
+      challenge.type === "achievement"
+        ? existingCollections
+        : existingCollections.filter(
+            (entry) =>
+              new Date(entry.capturedAt).getTime() >=
+              new Date(progress.assignedAt).getTime(),
+          );
+
     const computedProgress = progressMatchesChallenge(
       challenge.conditionType,
       collection,
       card,
-      existingCollections,
+      relevantCollections,
       challenge,
       cardLookup,
+      currentLevel,
     );
 
     let nextProgress = progress.progress;
@@ -1354,6 +1519,7 @@ async function applyChallengeProgress(
         .eq("id", progress.id);
 
       if (completed && !progress.completed) {
+        completedChallenge = true;
         await awardXp(
           supabase,
           userId,
@@ -1362,7 +1528,17 @@ async function applyChallengeProgress(
           challenge.title,
           now,
         );
+        currentTotalXp += challenge.xpReward;
+        currentLevel = currentLevelFromXp(currentTotalXp);
       }
+    }
+  }
+
+  if (completedChallenge) {
+    const userRow = await getUserRowById(supabase, userId);
+
+    if (userRow) {
+      await ensureChallenges(supabase, mapUserRow(userRow));
     }
   }
 }
@@ -1522,21 +1698,22 @@ export async function getHomeData(userId: string) {
     DbChallengeProgressRow & { challenge: DbChallengeRow | null }
   >;
 
-  const activeChallenges = progressRowList
-    .map((row) => {
-      const challenge = row.challenge;
-      if (!challenge) {
-        return null;
-      }
+  const activeChallenges = dedupeChallengeProgressEntries(
+    progressRowList
+      .map((row) => {
+        const challenge = row.challenge;
+        if (!challenge || !currentChallengeIds.has(challenge.id)) {
+          return null;
+        }
 
-      return {
-        progress: mapChallengeProgressRow(row),
-        challenge: mapChallengeRow(challenge),
-      };
-    })
-    .filter((entry): entry is { progress: UserChallengeProgressRecord; challenge: ChallengeTemplateRecord } =>
-      Boolean(entry),
-    )
+        return {
+          progress: mapChallengeProgressRow(row),
+          challenge: mapChallengeRow(challenge),
+        };
+      })
+      .filter((entry): entry is ChallengeProgressEntry => Boolean(entry)),
+  )
+    .filter((entry) => !entry.progress.expiresAt || new Date(entry.progress.expiresAt) > now)
     .sort((left, right) => {
       if (!left.progress.expiresAt) {
         return 1;
@@ -1601,6 +1778,7 @@ export async function getCollectionData(userId: string) {
 
 export async function getChallengesData(userId: string) {
   const supabase = createSupabaseAdminClient();
+  const now = new Date();
   const { data, error } = await supabase
     .from("user_challenge_progress")
     .select("*, challenge:challenges(*)")
@@ -1614,26 +1792,55 @@ export async function getChallengesData(userId: string) {
     DbChallengeProgressRow & { challenge: DbChallengeRow | null }
   >;
 
-  const progressItems = progressRowList
-    .map((row) => {
-      const challenge = row.challenge;
-      if (!challenge) {
-        return null;
-      }
+  const progressItems = dedupeChallengeProgressEntries(
+    progressRowList
+      .map((row) => {
+        const challenge = row.challenge;
+        if (!challenge || !currentChallengeIds.has(challenge.id)) {
+          return null;
+        }
 
-      return {
-        progress: mapChallengeProgressRow(row),
-        challenge: mapChallengeRow(challenge),
-      };
-    })
-    .filter((entry): entry is { progress: UserChallengeProgressRecord; challenge: ChallengeTemplateRecord } =>
-      Boolean(entry),
+        return {
+          progress: mapChallengeProgressRow(row),
+          challenge: mapChallengeRow(challenge),
+        };
+      })
+      .filter((entry): entry is ChallengeProgressEntry => Boolean(entry)),
+  );
+
+  const sortChallenges = (
+    left: { progress: UserChallengeProgressRecord; challenge: ChallengeTemplateRecord },
+    right: { progress: UserChallengeProgressRecord; challenge: ChallengeTemplateRecord },
+  ) => {
+    if (left.progress.completed !== right.progress.completed) {
+      return left.progress.completed ? 1 : -1;
+    }
+    return (
+      new Date(right.progress.assignedAt).getTime() -
+      new Date(left.progress.assignedAt).getTime()
     );
+  };
 
   return {
-    daily: progressItems.filter((entry) => entry.challenge.type === "daily"),
-    weekly: progressItems.filter((entry) => entry.challenge.type === "weekly"),
-    achievements: progressItems.filter((entry) => entry.challenge.type === "achievement"),
+    daily: progressItems
+      .filter(
+        (entry) =>
+          entry.challenge.type === "daily" &&
+          entry.progress.expiresAt &&
+          new Date(entry.progress.expiresAt) > now,
+      )
+      .sort(sortChallenges),
+    weekly: progressItems
+      .filter(
+        (entry) =>
+          entry.challenge.type === "weekly" &&
+          entry.progress.expiresAt &&
+          new Date(entry.progress.expiresAt) > now,
+      )
+      .sort(sortChallenges),
+    achievements: progressItems
+      .filter((entry) => entry.challenge.type === "achievement")
+      .sort(sortChallenges),
   };
 }
 
@@ -1721,114 +1928,7 @@ export async function getLeaderboardData(
     topRarity: rarityByUser.get(user.id) ?? null,
   }));
 
-  const mockUsersData = [
-    {
-      user: {
-        id: "mock-user-thomas",
-        email: "thomas@dexter.app",
-        googleName: "Thomas",
-        displayName: "Thomas",
-        avatarId: "avatar-1",
-        friendCode: "THOMAS12",
-        totalXp: 240,
-        environmentType: "urban" as const,
-        onboardingComplete: true,
-        createdAt: new Date().toISOString(),
-      },
-      xp: scope === "weekly" ? 120 : scope === "monthly" ? 180 : 240,
-      topRarity: "legendary" as Rarity,
-    },
-    {
-      user: {
-        id: "mock-user-junadiar",
-        email: "junadiar@dexter.app",
-        googleName: "Junadiar",
-        displayName: "Junadiar",
-        avatarId: "avatar-7",
-        friendCode: "JUNAD123",
-        totalXp: 185,
-        environmentType: "forest" as const,
-        onboardingComplete: true,
-        createdAt: new Date().toISOString(),
-      },
-      xp: scope === "weekly" ? 95 : scope === "monthly" ? 140 : 185,
-      topRarity: "epic" as Rarity,
-    },
-    {
-      user: {
-        id: "mock-user-nina",
-        email: "nina@dexter.app",
-        googleName: "Nina",
-        displayName: "Nina",
-        avatarId: "avatar-6",
-        friendCode: "NINA5678",
-        totalXp: 150,
-        environmentType: "desert" as const,
-        onboardingComplete: true,
-        createdAt: new Date().toISOString(),
-      },
-      xp: scope === "weekly" ? 80 : scope === "monthly" ? 110 : 150,
-      topRarity: "rare" as Rarity,
-    },
-    {
-      user: {
-        id: "mock-user-latrice",
-        email: "latrice@dexter.app",
-        googleName: "Latrice",
-        displayName: "Latrice",
-        avatarId: "avatar-5",
-        friendCode: "LATRICE9",
-        totalXp: 110,
-        environmentType: "urban" as const,
-        onboardingComplete: true,
-        createdAt: new Date().toISOString(),
-      },
-      xp: scope === "weekly" ? 50 : scope === "monthly" ? 80 : 110,
-      topRarity: "uncommon" as Rarity,
-    },
-    {
-      user: {
-        id: "mock-user-chris",
-        email: "chris@dexter.app",
-        googleName: "Chris",
-        displayName: "Chris",
-        avatarId: "avatar-3",
-        friendCode: "CHRIS123",
-        totalXp: 75,
-        environmentType: "rural" as const,
-        onboardingComplete: true,
-        createdAt: new Date().toISOString(),
-      },
-      xp: scope === "weekly" ? 35 : scope === "monthly" ? 55 : 75,
-      topRarity: "common" as Rarity,
-    },
-    {
-      user: {
-        id: "mock-user-john",
-        email: "john@dexter.app",
-        googleName: "John",
-        displayName: "John",
-        avatarId: "avatar-9",
-        friendCode: "JOHN4567",
-        totalXp: 40,
-        environmentType: "urban" as const,
-        onboardingComplete: true,
-        createdAt: new Date().toISOString(),
-      },
-      xp: scope === "weekly" ? 20 : scope === "monthly" ? 30 : 40,
-      topRarity: "common" as Rarity,
-    },
-  ];
-
-  const combined = [...realRows, ...mockUsersData];
-  const seenIds = new Set<string>();
-  const uniqueRows = combined.filter((row) => {
-    if (seenIds.has(row.user.id)) return false;
-    seenIds.add(row.user.id);
-    return true;
-  });
-
-  const rows = uniqueRows
+  const rows = realRows
     .sort((left, right) => right.xp - left.xp)
     .map((entry, index) => ({
       rank: index + 1,
