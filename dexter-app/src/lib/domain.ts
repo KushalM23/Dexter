@@ -1637,6 +1637,7 @@ export async function getChallengesData(userId: string) {
   };
 }
 
+
 export async function getLeaderboardData(
   userId: string,
   scope: "weekly" | "monthly" | "all-time",
@@ -1714,12 +1715,120 @@ export async function getLeaderboardData(
     }
   }
 
-  const rows = users
-    .map((user) => ({
-      user,
-      xp: xpByUser.get(user.id) ?? 0,
-      topRarity: rarityByUser.get(user.id) ?? null,
-    }))
+  const realRows = users.map((user) => ({
+    user,
+    xp: xpByUser.get(user.id) ?? 0,
+    topRarity: rarityByUser.get(user.id) ?? null,
+  }));
+
+  const mockUsersData = [
+    {
+      user: {
+        id: "mock-user-thomas",
+        email: "thomas@dexter.app",
+        googleName: "Thomas",
+        displayName: "Thomas",
+        avatarId: "avatar-1",
+        friendCode: "THOMAS12",
+        totalXp: 240,
+        environmentType: "urban" as const,
+        onboardingComplete: true,
+        createdAt: new Date().toISOString(),
+      },
+      xp: scope === "weekly" ? 120 : scope === "monthly" ? 180 : 240,
+      topRarity: "legendary" as Rarity,
+    },
+    {
+      user: {
+        id: "mock-user-junadiar",
+        email: "junadiar@dexter.app",
+        googleName: "Junadiar",
+        displayName: "Junadiar",
+        avatarId: "avatar-7",
+        friendCode: "JUNAD123",
+        totalXp: 185,
+        environmentType: "forest" as const,
+        onboardingComplete: true,
+        createdAt: new Date().toISOString(),
+      },
+      xp: scope === "weekly" ? 95 : scope === "monthly" ? 140 : 185,
+      topRarity: "epic" as Rarity,
+    },
+    {
+      user: {
+        id: "mock-user-nina",
+        email: "nina@dexter.app",
+        googleName: "Nina",
+        displayName: "Nina",
+        avatarId: "avatar-6",
+        friendCode: "NINA5678",
+        totalXp: 150,
+        environmentType: "desert" as const,
+        onboardingComplete: true,
+        createdAt: new Date().toISOString(),
+      },
+      xp: scope === "weekly" ? 80 : scope === "monthly" ? 110 : 150,
+      topRarity: "rare" as Rarity,
+    },
+    {
+      user: {
+        id: "mock-user-latrice",
+        email: "latrice@dexter.app",
+        googleName: "Latrice",
+        displayName: "Latrice",
+        avatarId: "avatar-5",
+        friendCode: "LATRICE9",
+        totalXp: 110,
+        environmentType: "urban" as const,
+        onboardingComplete: true,
+        createdAt: new Date().toISOString(),
+      },
+      xp: scope === "weekly" ? 50 : scope === "monthly" ? 80 : 110,
+      topRarity: "uncommon" as Rarity,
+    },
+    {
+      user: {
+        id: "mock-user-chris",
+        email: "chris@dexter.app",
+        googleName: "Chris",
+        displayName: "Chris",
+        avatarId: "avatar-3",
+        friendCode: "CHRIS123",
+        totalXp: 75,
+        environmentType: "rural" as const,
+        onboardingComplete: true,
+        createdAt: new Date().toISOString(),
+      },
+      xp: scope === "weekly" ? 35 : scope === "monthly" ? 55 : 75,
+      topRarity: "common" as Rarity,
+    },
+    {
+      user: {
+        id: "mock-user-john",
+        email: "john@dexter.app",
+        googleName: "John",
+        displayName: "John",
+        avatarId: "avatar-9",
+        friendCode: "JOHN4567",
+        totalXp: 40,
+        environmentType: "urban" as const,
+        onboardingComplete: true,
+        createdAt: new Date().toISOString(),
+      },
+      xp: scope === "weekly" ? 20 : scope === "monthly" ? 30 : 40,
+      topRarity: "common" as Rarity,
+    },
+  ];
+
+  const combined = [...realRows, ...mockUsersData];
+  const seenIds = new Set<string>();
+  const uniqueRows = combined.filter((row) => {
+    if (seenIds.has(row.user.id)) return false;
+    seenIds.add(row.user.id);
+    return true;
+  });
+
+  const rows = uniqueRows
     .sort((left, right) => right.xp - left.xp)
     .map((entry, index) => ({
       rank: index + 1,
