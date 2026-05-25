@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { AvatarBadge } from "@/components/ui/illustrations";
+import { AvatarBadge, DexterEyes } from "@/components/ui/illustrations";
+import { tabThemeConfig } from "@/lib/constants";
 import type { Rarity } from "@/lib/types";
 
 type LeaderboardRow = {
@@ -157,10 +158,10 @@ export function LeaderboardScreen({
                 </div>
 
                 {/* User Name */}
-                <div className="w-full mt-2 text-[0.7rem] sm:text-[11px] font-display uppercase tracking-wider text-black leading-tight text-center break-words max-w-[85px] sm:max-w-[100px] mx-auto min-h-[24px] flex items-center justify-center">
+                <div className="w-full mt-2 text-[1rem] sm:text-[11px] font-display uppercase tracking-wider text-black leading-tight text-center break-words max-w-[85px] sm:max-w-[100px] mx-auto min-h-[24px] flex items-center justify-center">
                   {row.user.displayName}
                 </div>
-                <div className={`text-[0.6rem] sm:text-[0.5rem] font-black font-sans mt-1 leading-none text-theme-accent`}>
+                <div className={`text-[0.8rem] sm:text-[0.5rem] font-black font-sans mt-1 leading-none text-theme-accent`}>
                   Level {level}
                 </div>
               </motion.div>
@@ -277,8 +278,34 @@ export function LeaderboardScreen({
     );
   };
 
+  const THEME = tabThemeConfig.leaderboard;
+
   return (
     <div className="space-y-5 pb-4">
+      {/* Brand-Led Premium Header */}
+      <div className="relative pb-2">
+        <motion.div
+          initial={{ y: -5, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.2, delay: 0.1, ease: "easeOut" }}
+          className="display-hero flex !font-slackey pl-4 flex-row items-center gap-3 !tracking-tight whitespace-nowrap leading-none"
+          style={{ color: THEME.accent }}
+        >
+          Dexters
+          <motion.div
+            animate={{ scaleY: [1, 1, 0.1, 1, 1] }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              times: [0, 0.9, 0.93, 0.96, 1],
+              ease: "easeInOut",
+            }}
+            className="shrink-0 origin-center"
+          >
+            <DexterEyes size={64} color={THEME.accent} />
+          </motion.div>
+        </motion.div>
+      </div>
       
       {/* ── 2. Stepped Bar-Graph Podium ── */}
       <div className="pt-2 select-none">
