@@ -1,22 +1,410 @@
 "use client";
 
-import { useState } from "react";
-import type { ReactNode } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   MapPin,
-  RotateCcw,
-  Sparkles,
-  Star,
-  Telescope,
-  X,
+  Calendar,
+  Compass,
+  Clock,
 } from "lucide-react";
 
-import { DexterEyes, SpeciesStamp } from "@/components/ui/illustrations";
-import { rarityCardThemes } from "@/lib/constants";
+import { rarityColors, rarityCardThemes } from "@/lib/constants";
 import type { PhotoSource, Rarity } from "@/lib/types";
 
-interface SpeciesCardProps {
+// ==========================================
+// 8-BIT VECTOR ILLUSTRATIONS (PLACEHOLDERS)
+// ==========================================
+
+// Cute Yellow Duck Mascot with Purple Cap in a puddle (User Reference Design)
+function DuckMascot() {
+  return (
+    <svg viewBox="0 0 100 100" className="w-full h-full">
+      <ellipse cx="50" cy="80" rx="30" ry="8" fill="#1A1A1A" opacity="0.15" />
+      {/* Water puddle */}
+      <path
+        d="M 20,80 Q 35,84 50,80 Q 65,76 80,80 Q 85,82 75,84 Q 50,88 25,84 Q 15,82 20,80 Z"
+        fill="#2191FB"
+        stroke="#1A1A1A"
+        strokeWidth="3.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M 30,82 Q 50,84 70,82"
+        fill="none"
+        stroke="#FFFFFF"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      
+      {/* Duck tail/body */}
+      <path
+        d="M 28,68 Q 24,55 20,52 Q 22,48 28,52 C 34,56 36,65 36,68 Z"
+        fill="#FFE047"
+        stroke="#1A1A1A"
+        strokeWidth="3.5"
+        strokeLinejoin="round"
+      />
+      {/* Main Duck Body */}
+      <ellipse cx="46" cy="64" rx="20" ry="14" fill="#FFD026" stroke="#1A1A1A" strokeWidth="3.5" />
+      {/* Wing */}
+      <path
+        d="M 38,62 Q 44,56 50,60 Q 52,65 44,68 Q 38,68 38,62 Z"
+        fill="#E6B800"
+        stroke="#1A1A1A"
+        strokeWidth="3"
+      />
+      
+      {/* Duck Neck & Head */}
+      <path d="M 52,62 L 56,42 Q 58,35 66,35 Q 74,35 74,44 L 62,64 Z" fill="#FFD026" />
+      <path
+        d="M 52,62 L 56,42 Q 58,35 66,35 Q 74,35 74,44 L 62,64"
+        fill="none"
+        stroke="#1A1A1A"
+        strokeWidth="3.5"
+        strokeLinecap="round"
+      />
+      <circle cx="65" cy="45" r="9" fill="#FFD026" />
+      {/* Head outline overlay */}
+      <path
+        d="M 55,46 C 54,34 68,32 73,42"
+        fill="none"
+        stroke="#1A1A1A"
+        strokeWidth="3.5"
+        strokeLinecap="round"
+      />
+      
+      {/* Cute smiling eye */}
+      <path
+        d="M 63,43 Q 65,41 67,43"
+        fill="none"
+        stroke="#1A1A1A"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      
+      {/* Beak */}
+      <path
+        d="M 72,43 C 78,43 82,45 82,49 C 82,51 77,53 71,51 Z"
+        fill="#FF6B00"
+        stroke="#1A1A1A"
+        strokeWidth="3.5"
+        strokeLinejoin="round"
+      />
+      <line x1="72" y1="47" x2="79" y2="47" stroke="#1A1A1A" strokeWidth="2" />
+      
+      {/* Purple Cap */}
+      <path
+        d="M 54,41 C 54,30 72,30 74,39 Z"
+        fill="#7902BD"
+        stroke="#1A1A1A"
+        strokeWidth="3.5"
+        strokeLinejoin="round"
+      />
+      {/* Cap visor */}
+      <path
+        d="M 70,39 L 84,39 C 86,39 86,42 80,42 L 72,42 Z"
+        fill="#F7D96B"
+        stroke="#1A1A1A"
+        strokeWidth="3"
+        strokeLinejoin="round"
+      />
+      {/* Cap button */}
+      <circle cx="64" cy="30" r="2" fill="#F7D96B" stroke="#1A1A1A" strokeWidth="1" />
+    </svg>
+  );
+}
+
+// Stylized Bluebird SVG (Aves)
+function BirdIllustration() {
+  return (
+    <svg viewBox="0 0 100 100" className="w-full h-full">
+      <ellipse cx="50" cy="82" rx="24" ry="6" fill="#1A1A1A" opacity="0.15" />
+      <path
+        d="M 15,80 L 85,80 Q 88,80 85,83 L 15,83 Z"
+        fill="#8B5A2B"
+        stroke="#1A1A1A"
+        strokeWidth="3"
+      />
+      <ellipse cx="48" cy="55" rx="18" ry="14" fill="#2191FB" stroke="#1A1A1A" strokeWidth="3.5" />
+      <circle cx="58" cy="42" r="10" fill="#2191FB" stroke="#1A1A1A" strokeWidth="3.5" />
+      <ellipse cx="52" cy="59" rx="11" ry="8" fill="#FFF" opacity="0.8" />
+      <circle cx="61" cy="40" r="1.5" fill="#1A1A1A" />
+      <path
+        d="M 68,39 L 76,43 L 67,45 Z"
+        fill="#FFC107"
+        stroke="#1A1A1A"
+        strokeWidth="3"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M 31,56 L 18,52 L 24,62 Z"
+        fill="#0A5EA5"
+        stroke="#1A1A1A"
+        strokeWidth="3"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M 40,54 Q 48,46 52,54 Q 48,64 40,58 Z"
+        fill="#0A5EA5"
+        stroke="#1A1A1A"
+        strokeWidth="3"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Retro Sprout (Plantae)
+function PlantIllustration() {
+  return (
+    <svg viewBox="0 0 100 100" className="w-full h-full">
+      <ellipse cx="50" cy="85" rx="22" ry="5" fill="#1A1A1A" opacity="0.15" />
+      <path
+        d="M 35,65 L 65,65 L 60,85 L 40,85 Z"
+        fill="#E07A5F"
+        stroke="#1A1A1A"
+        strokeWidth="3.5"
+        strokeLinejoin="round"
+      />
+      <rect x="32" y="60" width="36" height="6" rx="2" fill="#F4F1DE" stroke="#1A1A1A" strokeWidth="3.5" />
+      <rect x="36" y="58" width="28" height="4" fill="#6B513E" />
+      <path d="M 50,60 Q 52,38 48,25" fill="none" stroke="#1FC147" strokeWidth="5.5" strokeLinecap="round" />
+      <path
+        d="M 49,42 Q 32,32 40,48 Z"
+        fill="#1FC147"
+        stroke="#1A1A1A"
+        strokeWidth="3.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M 51,35 Q 68,25 60,40 Z"
+        fill="#1FC147"
+        stroke="#1A1A1A"
+        strokeWidth="3.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M 48,23 C 48,23 44,12 40,15 C 38,18 45,23 48,23 Z"
+        fill="#92E7A6"
+        stroke="#1A1A1A"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Cute Forest Mushroom (Fungi)
+function MushroomIllustration() {
+  return (
+    <svg viewBox="0 0 100 100" className="w-full h-full">
+      <ellipse cx="50" cy="85" rx="24" ry="6" fill="#1A1A1A" opacity="0.15" />
+      <rect x="38" y="52" width="24" height="30" rx="10" fill="#FFE0C1" stroke="#1A1A1A" strokeWidth="3.5" />
+      <circle cx="45" cy="65" r="2" fill="#1A1A1A" />
+      <circle cx="55" cy="65" r="2" fill="#1A1A1A" />
+      <path
+        d="M 20,54 C 20,24 80,24 80,54 C 80,57 74,58 70,57 C 62,55 58,58 50,57 C 42,58 38,55 30,57 C 26,58 20,57 20,54 Z"
+        fill="#E40046"
+        stroke="#1A1A1A"
+        strokeWidth="3.5"
+        strokeLinejoin="round"
+      />
+      <circle cx="50" cy="34" r="8" fill="#FFFFFF" stroke="#1A1A1A" strokeWidth="2" />
+      <circle cx="32" cy="46" r="6" fill="#FFFFFF" stroke="#1A1A1A" strokeWidth="2" />
+      <circle cx="68" cy="46" r="6" fill="#FFFFFF" stroke="#1A1A1A" strokeWidth="2" />
+    </svg>
+  );
+}
+
+// Cyber Beetle (Insecta)
+function InsectIllustration() {
+  return (
+    <svg viewBox="0 0 100 100" className="w-full h-full">
+      <ellipse cx="50" cy="80" rx="20" ry="5" fill="#1A1A1A" opacity="0.15" />
+      <path
+        d="M 30,35 L 20,30 M 30,50 L 16,50 M 32,65 L 18,72"
+        stroke="#1A1A1A"
+        strokeWidth="3.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M 70,35 L 80,30 M 70,50 L 84,50 M 68,65 L 82,72"
+        stroke="#1A1A1A"
+        strokeWidth="3.5"
+        strokeLinecap="round"
+      />
+      <path d="M 45,28 Q 42,16 34,18" fill="none" stroke="#1A1A1A" strokeWidth="3" strokeLinecap="round" />
+      <path d="M 55,28 Q 58,16 66,18" fill="none" stroke="#1A1A1A" strokeWidth="3" strokeLinecap="round" />
+      <ellipse cx="50" cy="56" rx="20" ry="24" fill="#7902BD" stroke="#1A1A1A" strokeWidth="3.5" />
+      <line x1="50" y1="32" x2="50" y2="80" stroke="#1A1A1A" strokeWidth="3.5" />
+      <circle cx="50" cy="30" r="10" fill="#381452" stroke="#1A1A1A" strokeWidth="3.5" />
+      <circle cx="46" cy="27" r="1.5" fill="#00D2FF" />
+      <circle cx="54" cy="27" r="1.5" fill="#00D2FF" />
+      <circle cx="38" cy="46" r="3" fill="#E40046" />
+      <circle cx="62" cy="46" r="3" fill="#E40046" />
+      <circle cx="38" cy="64" r="3" fill="#00D2FF" />
+      <circle cx="62" cy="64" r="3" fill="#00D2FF" />
+    </svg>
+  );
+}
+
+// Cute Green Lizard (Reptilia/Amphibia)
+function LizardIllustration() {
+  return (
+    <svg viewBox="0 0 100 100" className="w-full h-full">
+      <ellipse cx="50" cy="80" rx="24" ry="6" fill="#1A1A1A" opacity="0.15" />
+      <path
+        d="M 25,65 Q 40,78 55,75 Q 75,70 82,45 Q 85,35 80,38 Q 72,42 66,60 Z"
+        fill="#1FC147"
+        stroke="#1A1A1A"
+        strokeWidth="3.5"
+        strokeLinejoin="round"
+      />
+      <ellipse cx="44" cy="55" rx="16" ry="12" fill="#1FC147" stroke="#1A1A1A" strokeWidth="3.5" />
+      <circle cx="32" cy="46" r="10" fill="#1FC147" stroke="#1A1A1A" strokeWidth="3.5" />
+      <circle cx="28" cy="40" r="3" fill="#FFF" stroke="#1A1A1A" strokeWidth="1.5" />
+      <circle cx="27" cy="40" r="1" fill="#000" />
+      <circle cx="36" cy="42" r="3" fill="#FFF" stroke="#1A1A1A" strokeWidth="1.5" />
+      <circle cx="35" cy="42" r="1" fill="#000" />
+      <path
+        d="M 38,65 L 30,78 M 46,65 L 42,79 M 54,65 L 56,76"
+        stroke="#1A1A1A"
+        strokeWidth="3.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+// Cute Goldfish (Actinopterygii)
+function FishIllustration() {
+  return (
+    <svg viewBox="0 0 100 100" className="w-full h-full">
+      <ellipse cx="50" cy="80" rx="24" ry="5" fill="#1A1A1A" opacity="0.15" />
+      <path
+        d="M 28,50 L 12,36 L 18,50 L 12,64 Z"
+        fill="#FF8C00"
+        stroke="#1A1A1A"
+        strokeWidth="3.5"
+        strokeLinejoin="round"
+      />
+      <ellipse cx="52" cy="50" rx="22" ry="16" fill="#FFB938" stroke="#1A1A1A" strokeWidth="3.5" />
+      <ellipse cx="55" cy="53" rx="14" ry="10" fill="#FFF" opacity="0.3" />
+      <circle cx="64" cy="46" r="3" fill="#FFF" stroke="#1A1A1A" strokeWidth="1.5" />
+      <circle cx="65" cy="46" r="1" fill="#000" />
+      <path d="M 48,34 Q 40,24 48,28 Z" fill="#FF8C00" stroke="#1A1A1A" strokeWidth="2.5" />
+      <path d="M 52,66 Q 44,76 52,72 Z" fill="#FF8C00" stroke="#1A1A1A" strokeWidth="2.5" />
+      <path d="M 58,56 Q 66,62 58,62 Z" fill="#FF8C00" stroke="#1A1A1A" strokeWidth="2.5" />
+    </svg>
+  );
+}
+
+// Default Chibi Creature
+function DefaultIllustration() {
+  return (
+    <svg viewBox="0 0 100 100" className="w-full h-full">
+      <ellipse cx="50" cy="80" rx="24" ry="6" fill="#1A1A1A" opacity="0.15" />
+      <ellipse cx="50" cy="50" rx="22" ry="22" fill="#E5E9ED" stroke="#1A1A1A" strokeWidth="3.5" />
+      <circle cx="40" cy="45" r="5" fill="#1A1A1A" />
+      <circle cx="60" cy="45" r="5" fill="#1A1A1A" />
+      <circle cx="42" cy="43" r="1.5" fill="#FFF" />
+      <circle cx="62" cy="43" r="1.5" fill="#FFF" />
+      <path d="M 42,60 Q 50,66 58,60" fill="none" stroke="#1A1A1A" strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M 30,28 L 40,36 M 70,28 L 60,36" stroke="#1A1A1A" strokeWidth="4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+interface IllustrationProps {
+  className: string;
+  commonName: string;
+}
+
+function SpeciesIllustration({ className, commonName }: IllustrationProps) {
+  const nameLower = commonName.toLowerCase();
+  
+  if (nameLower.includes("duck") || nameLower.includes("ducky") || className === "Mammalia") {
+    return <DuckMascot />;
+  }
+  if (className === "Aves") {
+    return <BirdIllustration />;
+  }
+  if (className === "Plantae") {
+    return <PlantIllustration />;
+  }
+  if (className === "Fungi") {
+    return <MushroomIllustration />;
+  }
+  if (className === "Insecta") {
+    return <InsectIllustration />;
+  }
+  if (className === "Reptilia" || className === "Amphibia") {
+    return <LizardIllustration />;
+  }
+  if (className === "Actinopterygii") {
+    return <FishIllustration />;
+  }
+  return <DefaultIllustration />;
+}
+
+// 4-digit stable species Pokédex ID format: "#1279" or "#1505"
+function getSpeciesId(gbifTaxonKey?: number, scientificName?: string): string {
+  const num = gbifTaxonKey ? Number(gbifTaxonKey) : 0;
+  if (num > 0) {
+    return `${(num % 9000) + 1000}`;
+  }
+  if (scientificName) {
+    const seed = Array.from(scientificName).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    return `${(seed % 9000) + 1000}`;
+  }
+  return "1000";
+}
+
+// ==========================================
+// RETRO-STYLE RETRO DECORATIONS
+// ==========================================
+
+// Retro wireframe Globe SVG
+function RetroGlobeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5 fill-none stroke-[#1A1A1A]" strokeWidth="2.5">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      <path d="M2 12h20" />
+    </svg>
+  );
+}
+
+// Retro barcode stripe bar
+function RetroBarcode() {
+  return (
+    <div className="flex items-center gap-[2px] h-3.5 opacity-85 select-none" aria-hidden="true">
+      <div className="w-[1px] h-full bg-[#1A1A1A]" />
+      <div className="w-[3px] h-full bg-[#1A1A1A]" />
+      <div className="w-[1px] h-full bg-[#1A1A1A]" />
+      <div className="w-[2.5px] h-full bg-[#1A1A1A]" />
+      <div className="w-[1px] h-full bg-[#1A1A1A]" />
+      <div className="w-[1.5px] h-full bg-[#1A1A1A]" />
+      <div className="w-[0.7px] h-full bg-[#1A1A1A]" />
+      <div className="w-[2.5px] h-full bg-[#1A1A1A]" />
+    </div>
+  );
+}
+
+// Retro compass icon
+function RetroCompassIcon() {
+  return (
+    <Compass className="h-4.5 w-4.5 text-[#1A1A1A] stroke-[2.5]" />
+  );
+}
+
+// ==========================================
+// EXPORTS & CARD SPECIFICATIONS
+// ==========================================
+
+export interface SpeciesCardProps {
   commonName: string;
   scientificName: string;
   kingdom: string;
@@ -37,22 +425,43 @@ interface SpeciesCardProps {
   capturedAt?: string;
   compact?: boolean;
   disabled?: boolean;
+  gbifTaxonKey?: number;
 }
 
 export function SpeciesCard(props: SpeciesCardProps) {
   const [open, setOpen] = useState(false);
+
+  if (props.compact) {
+    return (
+      <>
+        <motion.button
+          type="button"
+          onClick={() => setOpen(true)}
+          whileHover={{ y: -4, scale: 1.015 }}
+          whileTap={{ scale: 0.985 }}
+          className={`soft-press block w-full text-left outline-none ${
+            props.disabled ? "opacity-75 grayscale" : ""
+          }`}
+        >
+          <div className="relative mx-auto aspect-[3/4.5] w-full">
+            <CardCompact {...props} />
+          </div>
+        </motion.button>
+        <CardModal {...props} open={open} onClose={() => setOpen(false)} />
+      </>
+    );
+  }
 
   return (
     <>
       <motion.button
         type="button"
         onClick={() => setOpen(true)}
-        whileHover={{ y: -2 }}
-        whileTap={{ y: 1, scale: 0.992 }}
-        transition={{ duration: 0.16, ease: "easeOut" }}
-        className="soft-press block w-full text-left"
+        whileHover={{ y: -3 }}
+        whileTap={{ scale: 0.99 }}
+        className="soft-press block w-full text-left outline-none"
       >
-        <div className="species-card-shell relative mx-auto aspect-[0.71] w-full">
+        <div className="relative mx-auto aspect-[3/4.5] w-full">
           <CardFront {...props} />
         </div>
       </motion.button>
@@ -61,63 +470,402 @@ export function SpeciesCard(props: SpeciesCardProps) {
   );
 }
 
-export function RevealSpeciesCard(
-  props: SpeciesCardProps & {
-    containerClassName?: string;
-    cardHeightClass?: string;
-  },
-) {
+// Rarity stripes generator: 1 for Common, 2 for Uncommon, 3 for Rare, 4 for Epic, 5 for Legendary
+function RaritySlantedStripes({ rarity }: { rarity: Rarity }) {
+  const filledCount = {
+    common: 1,
+    uncommon: 2,
+    rare: 3,
+    epic: 4,
+    legendary: 5,
+  }[rarity];
+
   return (
-    <FlippableCard
-      {...props}
-      containerClassName={props.containerClassName}
-      cardHeightClass={props.cardHeightClass}
-    />
+    <div className="flex gap-[3.5px] items-center">
+      {Array.from({ length: 5 }).map((_, idx) => (
+        <div
+          key={idx}
+          className="w-[8px] h-[16px] transform -skew-x-[20deg]"
+          style={{
+            backgroundColor: idx < filledCount ? "#000000" : "rgba(0,0,0,0.25)",
+            boxShadow: idx < filledCount ? "0 1px 2px rgba(0,0,0,0.3)" : "none",
+          }}
+        />
+      ))}
+    </div>
   );
 }
 
+// Infinite looping holographic glare sweep overlay
+function CardGlareOverlay() {
+  return (
+    <>
+      <style>{`
+        @keyframes glareSweep {
+          0% { background-position: -100% -100%; }
+          25% { background-position: 200% 200%; }
+          100% { background-position: 200% 200%; }
+        }
+      `}</style>
+      <div
+        className="absolute inset-0 pointer-events-none z-[45] rounded-2xl overflow-hidden"
+        style={{
+          background: "linear-gradient(-45deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.48) 50%, rgba(255,255,255,0) 65%)",
+          backgroundSize: "250% 250%",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "-100% -100%",
+          animation: "glareSweep 4.5s infinite linear",
+          mixBlendMode: "overlay",
+        }}
+      />
+    </>
+  );
+}
+
+// Seamless vector-clipped illustration container
+function IllustrationContainer({
+  rarity,
+  children,
+  speciesId,
+  notchTextColor,
+  hasNotch = true,
+}: {
+  rarity: Rarity;
+  children: React.ReactNode;
+  speciesId?: string;
+  notchTextColor?: string;
+  hasNotch?: boolean;
+}) {
+  const cardTheme = rarityCardThemes[rarity];
+
+  if (!hasNotch) {
+    return (
+      <div 
+        className="relative w-full aspect-square mt-2 border-3 border-[#1A1A1A] rounded-lg overflow-hidden select-none"
+        style={{
+          background: `linear-gradient(180deg, ${cardTheme.dark} 0%, #0d0d10 100%)`,
+        }}
+      >
+        {/* Grid Mesh Overlay */}
+        <div className="absolute inset-0 opacity-15 bg-[linear-gradient(to_right,#555_1px,transparent_1px),linear-gradient(to_bottom,#555_1px,transparent_1px)] bg-[size:10px_10px] pointer-events-none" />
+        
+        {/* Centered illustration */}
+        <div className="absolute inset-0 flex items-center justify-center p-6 z-0">
+          <div className="relative h-[85%] aspect-square drop-shadow-[0_8px_16px_rgba(0,0,0,0.25)]">
+            {children}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full aspect-square mt-2 select-none">
+      {/* SVG Background + Custom Border drawn with consistent rounded corners */}
+      <svg
+        viewBox="0 0 100 100"
+        className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id={`illustration-gradient-${rarity}`} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={cardTheme.dark} />
+            <stop offset="100%" stopColor="#0d0d10" />
+          </linearGradient>
+          <clipPath id={`illustration-clip-${rarity}`} clipPathUnits="objectBoundingBox">
+            <path d="M 0.27,0 L 0.97,0 Q 1,0 1,0.03 L 1,0.97 Q 1,1 0.97,1 L 0.03,1 Q 0,1 0,0.97 L 0,0.15 Q 0,0.12 0.03,0.12 L 0.21,0.12 Q 0.24,0.12 0.24,0.09 L 0.24,0.03 Q 0.24,0 0.27,0 Z" />
+          </clipPath>
+        </defs>
+
+        {/* Slanted notch shape filled with background gradient */}
+        <path
+          d="M 27,0 L 97,0 Q 100,0 100,3 L 100,97 Q 100,100 97,100 L 3,100 Q 0,100 0,97 L 0,15 Q 0,12 3,12 L 21,12 Q 24,12 24,9 L 24,3 Q 24,0 27,0 Z"
+          fill={`url(#illustration-gradient-${rarity})`}
+        />
+
+        {/* Outlines: Draw borders around the entire container including the rounded notch */}
+        <path
+          d="M 27,0 L 97,0 Q 100,0 100,3 L 100,97 Q 100,100 97,100 L 3,100 Q 0,100 0,97 L 0,15 Q 0,12 3,12 L 21,12 Q 24,12 24,9 L 24,3 Q 24,0 27,0 Z"
+          fill="none"
+          stroke="#000000"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+
+      {/* Grid Mesh Overlay clipped to follow the slanted cut-out notch */}
+      <div 
+        className="absolute inset-0 opacity-15 bg-[linear-gradient(to_right,#555_1px,transparent_1px),linear-gradient(to_bottom,#555_1px,transparent_1px)] bg-[size:10px_10px] pointer-events-none"
+        style={{
+          clipPath: `url(#illustration-clip-${rarity})`,
+        }}
+      />
+
+      {/* Species ID text sitting directly in the seamless borderless cut-out */}
+      {speciesId && (
+        <div
+          className="absolute top-0 -left-1 h-[12%] w-[24%] z-10 flex items-center justify-center font-black leading-none"
+          style={{
+            color: '#000000',
+            fontSize: "0.95rem",
+            letterSpacing: "0.05em",
+            paddingBottom: "3px",
+          }}
+        >
+          #{speciesId}
+        </div>
+      )}
+
+      {/* Centered illustration */}
+      <div className="absolute inset-0 flex items-center justify-center p-6 z-0">
+        <div className="relative h-[85%] aspect-square">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Compact variant: Aspect ratio 3:4.5, exact rarity color background, raised pop shadow, no XP, top-left slanted lines, top-right species code, square illustration
+function CardCompact(props: SpeciesCardProps) {
+  const themeColor = rarityColors[props.rarity];
+  const speciesId = getSpeciesId(props.gbifTaxonKey, props.scientificName);
+
+  return (
+    <div
+      className="relative h-full w-full overflow-hidden rounded-2xl border-3 border-[#1A1A1A] flex flex-col p-2.5 shadow-[4px_4px_0px_#1A1A1A]"
+      style={{ backgroundColor: themeColor }}
+    >
+      {/* Holographic glare effect overlay */}
+      <CardGlareOverlay />
+
+      {/* Top Header Row of Compact card: Slanted lines in the top left, Species ID in top right */}
+      <div className="flex items-center justify-between mt-0.5 px-0.5 h-4 mb-1">
+        <div className="z-10 flex items-center">
+          <RaritySlantedStripes rarity={props.rarity} />
+        </div>
+        <div className="text-sm font-mono font-black uppercase text-white drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.45)]">
+          #{speciesId}
+        </div>
+      </div>
+
+      {/* Square Illustration Container (no notch for compact mode) */}
+      <IllustrationContainer
+        rarity={props.rarity}
+        hasNotch={false}
+      >
+        <SpeciesIllustration className={props.className} commonName={props.commonName} />
+      </IllustrationContainer>
+
+      {/* Common Name Centered */}
+      <div className="flex-1 flex items-center justify-center min-h-0 pt-2">
+        <div
+          className="text-md text-white text-left truncate w-full px-0.5 tracking-tight font-display drop-shadow-[2px_2px_0_rgba(0,0,0,1)]"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {props.commonName}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Front face: Aspect 3:4.5, bold 4px border, raised shadow (8px), solid exact rarity bg, slanted lines top-left, XP top-right (not inside illustration box), seamless notch inside, location right above separating line, rarity on the right, icons on the left, dates/time on back
+function CardFront(props: SpeciesCardProps) {
+  const themeColor = rarityColors[props.rarity];
+  const speciesIdStr = getSpeciesId(props.gbifTaxonKey, props.scientificName);
+  const notchTextColor = ["common", "uncommon"].includes(props.rarity) ? "#1A1A1A" : "#FFFFFF";
+
+  return (
+    <div
+      className="relative h-full w-full overflow-hidden rounded-2xl border-4 border-[#000000] p-4 flex flex-col justify-between shadow-[8px_8px_0px_#000000] transition-all select-none"
+      style={{ backgroundColor: themeColor }}
+    >
+      {/* Holographic glare effect overlay */}
+      <CardGlareOverlay />
+
+      {/* Top Header Row of Outer Card (Slanted lines in top left, XP value in top right) */}
+      <div className="flex items-center justify-between py-1 mb-2 px-1 h-4.5">
+        <div className="z-10 flex items-center">
+          <RaritySlantedStripes rarity={props.rarity} />
+        </div>
+        <div className="text-md font-slackey font-black uppercase text-white">
+          {props.xpValue} XP
+        </div>
+      </div>
+
+      {/* Square Illustration Container with custom notch */}
+      <IllustrationContainer
+        rarity={props.rarity}
+        speciesId={speciesIdStr}
+        notchTextColor={notchTextColor}
+        hasNotch={true}
+      >
+        <SpeciesIllustration className={props.className} commonName={props.commonName} />
+      </IllustrationContainer>
+
+      {/* Typography block with Location Right Above the separating line */}
+      <div className="flex-1 flex flex-col py-4 mt-2 px-0.5">
+        <div className="flex items-end justify-between select-none">
+          <div className="min-w-0 flex-1">
+            <div
+              className="text-3xl leading-[1.0] tracking-wide text-white truncate drop-shadow-[3px_3px_0_rgba(0,0,0,1)]"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              {props.commonName}
+            </div>
+            <div className="text-sm italic font-semibold text-white/90 mt-1 truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]">
+              {props.scientificName}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Section Line & Rarity / Icons Row */}
+      <div className="mb-2">
+        <div className="h-[2.5px] bg-[#1A1A1A] w-full" />
+        <div className="flex items-center justify-between pt-2 px-0.5">
+          {/* Left Side: Globe & Compass & Barcode */}
+          <div className="flex items-center gap-2">
+            <RetroGlobeIcon />
+            <RetroCompassIcon />
+            <RetroBarcode />
+          </div>
+          {/* Right Side: Rarity */}
+          <div className="text-right font-slackey font-black uppercase tracking-widest text-lg text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+            {props.rarity}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Back face of card: Aspect 3:4.5, premium sci-fi scanning capsules, no messy tables, date in bottom-left, time in bottom-right
+function CardBack(props: SpeciesCardProps) {
+  const cardTheme = rarityCardThemes[props.rarity];
+
+  const taxonomyEntries = [
+    { label: "Kingdom", value: props.kingdom },
+    { label: "Phylum", value: props.phylum },
+    { label: "Class", value: props.className },
+    { label: "Order", value: props.order },
+    { label: "Family", value: props.family },
+    { label: "Genus", value: props.genus },
+    { label: "Sightings", value: props.occurrenceCount.toLocaleString() },
+    { label: "Binomial", value: props.scientificName },
+  ];
+
+  return (
+    <div
+      className="relative h-full w-full overflow-hidden rounded-2xl border-4 border-[#000000] p-4 flex flex-col justify-between shadow-[8px_8px_0px_#000000] text-white select-none"
+      style={{
+        background: `linear-gradient(180deg, ${cardTheme.dark} 0%, #0d0d10 90%)`,
+      }}
+    >
+      {/* Holographic glare effect overlay */}
+      <CardGlareOverlay />
+
+      {/* Mesh Overlay Grid */}
+      <div className="absolute inset-0 opacity-12 bg-[linear-gradient(to_right,#555_1px,transparent_1px),linear-gradient(to_bottom,#555_1px,transparent_1px)] bg-[size:14px_14px]" />
+
+      <div className="relative z-10 flex flex-col h-full justify-between font-mono">
+        
+        {/* Terminal Sci-Fi Taxonomy Grid (replaces the plain messy table) */}
+        <div className="flex flex-col gap-2 mt-2 text-white/90">
+          <div className="grid grid-cols-2 gap-2 pt-1.5">
+            {taxonomyEntries.map((entry) => (
+              <div 
+                key={entry.label} 
+                className="bg-white/[0.02] border border-white/[0.06] rounded-md px-2 py-1 flex items-center justify-between h-[26px]"
+              >
+                <span className="text-[9px] uppercase tracking-wider text-white/40 font-bold leading-none">
+                  {entry.label}
+                </span>
+                <span className="font-semibold text-[12px] text-white truncate ml-2 leading-none">
+                  {entry.value || "—"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Monospace scrollable observations lore notes */}
+        <div className="flex-1 flex flex-col overflow-hidden my-6">
+          <div className="text-[12px] font-black uppercase tracking-widest text-white/60 mb-1 leading-none pb-1 border-b border-white/10">
+            FIELD OBSERVATIONS
+          </div>
+          <div className="flex-1 overflow-y-auto pr-1 text-[11px] leading-relaxed text-white font-medium select-text scrollbar-thin">
+            {props.lore || "A waiting entry holds details about this verified catch in the local wilderness."}
+          </div>
+        </div>
+
+        {/* Footer: Date (Left) and Time (Right) - Location Removed */}
+        <div className="border-t border-white/10 pt-2 flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-white/50">
+          <div className="flex items-center gap-1.5">
+            <span>{formatDate(props.capturedAt)}</span>
+          </div>
+          {formatTime(props.capturedAt) ? (
+            <div className="flex items-center gap-1.5">
+              <span>{formatTime(props.capturedAt)}</span>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 3D Flippable card layer with continuous Y flipping (in inverted/backward direction)
 function FlippableCard(
   props: SpeciesCardProps & {
     containerClassName?: string;
     cardHeightClass?: string;
   },
 ) {
-  const [flipped, setFlipped] = useState(false);
+  const [rotation, setRotation] = useState(0);
 
   return (
     <div
-      className={props.containerClassName ?? "species-card-shell mx-auto w-full"}
+      className={props.containerClassName ?? "species-card-shell mx-auto w-full cursor-pointer select-none"}
       style={{ perspective: 1400 }}
-      onClick={() => setFlipped((value) => !value)}
+      onClick={() => {
+        if (window.getSelection()?.toString()) return;
+        setRotation((r) => r - 180); // Flip in the inverted direction
+      }}
     >
       <motion.div
-        className={props.cardHeightClass ?? "relative aspect-[0.71] w-full"}
-        animate={{ rotateY: flipped ? 180 : 0 }}
-        whileTap={{ scale: 0.992 }}
+        className={props.cardHeightClass ?? "relative aspect-[3/4.5] w-full"}
+        animate={{ rotateY: rotation }}
+        whileTap={{ scale: 0.99 }}
         transition={{ duration: 0.6, ease: "easeInOut" }}
         style={{
           transformStyle: "preserve-3d",
           WebkitTransformStyle: "preserve-3d",
         }}
       >
+        {/* FRONT */}
         <div
           className="absolute inset-0"
           style={{
             backfaceVisibility: "hidden",
             WebkitBackfaceVisibility: "hidden",
             transform: "rotateY(0deg)",
-            pointerEvents: flipped ? "none" : "auto",
+            pointerEvents: (rotation / 180) % 2 === 0 ? "auto" : "none",
           }}
         >
           <CardFront {...props} />
         </div>
+        
+        {/* BACK */}
         <div
           className="absolute inset-0"
           style={{
             backfaceVisibility: "hidden",
             WebkitBackfaceVisibility: "hidden",
             transform: "rotateY(180deg)",
-            pointerEvents: flipped ? "auto" : "none",
+            pointerEvents: (rotation / 180) % 2 !== 0 ? "auto" : "none",
           }}
         >
           <CardBack {...props} />
@@ -127,413 +875,303 @@ function FlippableCard(
   );
 }
 
-function CardFront(props: SpeciesCardProps) {
-  const compact = props.compact ?? false;
-  const theme = rarityCardThemes[props.rarity];
-  const number = formatCardNumber(props.scientificName);
+// Modal popup utilizing a React Portal to escape CSS stacking contexts and cover everything (including binder tabs) at z-[99999]
+function CardModal(props: SpeciesCardProps & { open: boolean; onClose: () => void }) {
+  const [mounted, setMounted] = useState(false);
+  const themeColor = rarityColors[props.rarity];
 
-  return (
-    <div
-      className={`relative h-full w-full overflow-hidden rounded-3xl border-4 border-[#1A1A1A] bg-[#FFF7EB] ${
-        props.disabled ? "opacity-70 grayscale-[0.12]" : ""
-      }`}
-      style={{
-        boxShadow: `0 22px 42px -22px ${theme.base}88`,
-      }}
-    >
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,#FFFDF7_0%,#FFF3D9_100%)]" />
-      <div
-        className="absolute inset-x-0 top-0 h-[40%]"
-        style={{
-          background: `linear-gradient(180deg, ${theme.light} 0%, ${theme.accent} 100%)`,
-        }}
-      />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_16%,rgba(255,255,255,0.72),transparent_22%),radial-gradient(circle_at_86%_18%,rgba(255,255,255,0.55),transparent_20%),linear-gradient(180deg,transparent_48%,rgba(255,255,255,0.28)_100%)]" />
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
-      <div className={`relative flex h-full flex-col ${compact ? "p-2.5" : "p-3.5"}`}>
-        <div className="flex items-start justify-between gap-3 rounded-2xl border-2 border-[#1A1A1A] bg-[#FFFDF6]/95 px-3 py-2.5 shadow-lg">
-          <div className="min-w-0">
-            <div
-              className={`${compact ? "line-clamp-2 text-lg" : "text-3xl"} leading-[0.9] tracking-[-0.05em] text-[#111111]`}
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              {props.commonName}
-            </div>
-            <div className="mt-1 flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-black/55">
-              <span>{props.kingdom}</span>
-              {!compact ? <span className="text-black/28">No.{number}</span> : null}
-            </div>
-          </div>
-          <div className="shrink-0 rounded-xl border-2 border-[#1A1A1A] bg-white/75 px-2.5 py-2 text-right">
-            <RarityStars rarity={props.rarity} />
-            <div className="mt-1 text-xs font-black uppercase tracking-[0.18em] text-black/65">
-              {props.rarity}
-            </div>
-          </div>
-        </div>
+  if (!mounted) return null;
 
-        <div
-          className={`relative ${compact ? "mt-2.5" : "mt-3"} flex-1 overflow-hidden rounded-3xl border-4 border-[#1A1A1A]`}
-          style={{
-            background: `linear-gradient(180deg, ${theme.base} 0%, ${theme.light} 100%)`,
-          }}
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_18%,rgba(255,255,255,0.65),transparent_28%),radial-gradient(circle_at_82%_20%,rgba(255,255,255,0.55),transparent_22%),linear-gradient(180deg,rgba(255,255,255,0.12)_0%,rgba(15,82,186,0.08)_100%)]" />
-          <div
-            className="absolute -right-4 top-4 size-14 rounded-full border-4 border-[#1A1A1A]"
-            style={{ backgroundColor: `${theme.accent}55` }}
-          />
-          <div className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full border-2 border-[#1A1A1A] bg-white/72 px-2.5 py-1 text-xs font-black uppercase tracking-[0.18em] text-[#1A1A1A]">
-            <Sparkles className="h-3 w-3" />
-            Field Card
-          </div>
-          <div
-            className="absolute bottom-5 left-4 h-5 w-20 rounded-full border-4 border-[#1A1A1A] bg-black/10"
-            style={{ transform: "rotate(-10deg)" }}
-          />
-          <div className="absolute inset-0 px-5 pb-7 pt-6">
-            <CardArt {...props} />
-          </div>
-        </div>
-
-        <div className={`${compact ? "mt-2.5" : "mt-3"} rounded-2xl border-2 border-[#1A1A1A] bg-[#FFFDF8] px-3 py-3 shadow-lg`}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-xs font-black uppercase tracking-[0.18em] text-black/45">
-                Scientific Name
-              </div>
-              <div
-                className={`mt-1 ${compact ? "text-xs" : "text-sm"} truncate italic text-[#1A1A1A]/80`}
-              >
-                {props.scientificName}
-              </div>
-            </div>
-            {compact ? null : (
-              <div className="shrink-0 text-xs font-black uppercase tracking-[0.18em] text-black/55">
-                No.{number}
-              </div>
-            )}
-          </div>
-
-          <div className={`mt-3 grid ${compact ? "grid-cols-2" : "grid-cols-3"} gap-2`}>
-            <StatChip
-              icon={<Sparkles className="h-3.5 w-3.5" />}
-              label="XP"
-              value={`${props.xpValue}`}
-              accent={theme.base}
-            />
-            {!compact ? (
-              <StatChip
-                icon={<Telescope className="h-3.5 w-3.5" />}
-                label="Sightings"
-                value={abbreviate(props.occurrenceCount)}
-                accent={theme.base}
-              />
-            ) : null}
-            <StatChip
-              icon={<MapPin className="h-3.5 w-3.5" />}
-              label={compact ? "Where" : "Locale"}
-              value={shortLocation(props.locationLabel)}
-              accent={theme.base}
-            />
-            {compact ? (
-              <StatChip
-                icon={<Telescope className="h-3.5 w-3.5" />}
-                label="Seen"
-                value={abbreviate(props.occurrenceCount)}
-                accent={theme.base}
-              />
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CardBack(props: SpeciesCardProps) {
-  const theme = rarityCardThemes[props.rarity];
-  const taxonomyEntries = [
-    ["Kingdom", props.kingdom],
-    ["Phylum", props.phylum],
-    ["Class", props.className],
-    ["Order", props.order],
-    ["Family", props.family],
-    ["Genus", props.genus],
-  ];
-
-  return (
-    <div
-      className="relative h-full w-full overflow-hidden rounded-3xl border-4 border-[#1A1A1A]"
-      style={{
-        background: `linear-gradient(180deg, ${theme.dark} 0%, #1A1A1A 68%)`,
-        boxShadow: `0 18px 36px -18px ${theme.base}88`,
-      }}
-    >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(255,255,255,0.18),transparent_26%),radial-gradient(circle_at_90%_16%,rgba(255,255,255,0.12),transparent_20%)]" />
-      <div className="relative flex h-full flex-col p-3.5 text-white">
-        <div className="flex items-start justify-between gap-3 rounded-2xl border border-white/14 bg-white/8 px-3.5 py-3 backdrop-blur-sm">
-          <div>
-            <div className="text-xs font-black uppercase tracking-[0.24em] text-white/55">
-              Field Dossier
-            </div>
-            <div
-              className="mt-2 text-2xl leading-[0.92] tracking-[-0.05em]"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              {props.commonName}
-            </div>
-            <div className="mt-2 text-xs italic text-white/72">
-              {props.scientificName}
-            </div>
-          </div>
-          <div className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-white/80">
-            Tap to flip
-          </div>
-        </div>
-
-        <div className="mt-3 rounded-3xl border border-white/15 bg-white/8 px-4 py-4 backdrop-blur-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-xs font-black uppercase tracking-[0.22em] text-white/55">
-              Taxonomy
-            </div>
-            <div className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-black uppercase tracking-[0.18em] text-white/70">
-              Verified
-            </div>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2.5">
-            {taxonomyEntries.map(([label, value]) => (
-              <div
-                key={label}
-                className="rounded-2xl border border-white/12 bg-[#F7FBFF] px-3 py-3 text-[#10263D]"
-              >
-                <div className="text-xs font-black uppercase tracking-[0.18em] text-[#10263D]/55">
-                  {label}
-                </div>
-                <div className="mt-1 text-xs font-semibold leading-5">
-                  {value}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-2.5 rounded-2xl border border-white/12 bg-[#D8ECFF] px-3 py-3 text-[#10263D]">
-            <div className="text-xs font-black uppercase tracking-[0.18em] text-[#10263D]/55">
-              Species
-            </div>
-            <div className="mt-1 text-sm font-semibold leading-5">
-              {props.scientificName}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3 rounded-3xl border border-white/15 bg-[#FFF7EB] px-4 py-4 text-[#1A1A1A]">
-          <div className="text-xs font-black uppercase tracking-[0.2em] text-black/48">
-            Field notes
-          </div>
-          <p className="mt-2 line-clamp-4 text-sm leading-6 text-black/72">
-            {props.lore || "A fresh entry is waiting for the next verified field note."}
-          </p>
-        </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <DetailBlock label="Caught" value={formatCapturedAt(props.capturedAt)} />
-          <DetailBlock label="Source" value={props.photoSource ?? "silhouette"} />
-          <DetailBlock label="Location" value={props.locationLabel || "Unknown"} />
-          <DetailBlock label="Rarity" value={props.rarity} accent={theme.accent} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CardArt(props: SpeciesCardProps) {
-  const artSrc = props.pixelArtUrl || props.photoUrl || "";
-
-  return (
-    <div className="flex h-full items-center justify-center">
-      <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl border-4 border-dashed border-[#1A1A1A] bg-white/28">
-        <div className="absolute inset-x-[14%] bottom-[16%] h-4 rounded-full bg-black/10 blur-md" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,0.88),transparent_30%)]" />
-
-        <div className="relative flex h-full w-full items-center justify-center px-4 py-5">
-          {artSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={artSrc}
-              alt={props.commonName}
-              className="max-h-full w-auto object-contain drop-shadow-lg"
-              loading="lazy"
-            />
-          ) : (
-            <div className="size-20">
-              <SpeciesStamp className={props.className} rarity={props.rarity} />
-            </div>
-          )}
-        </div>
-
-        <div className="absolute left-3 top-3 rounded-full border-2 border-[#1A1A1A] bg-white/88 px-2.5 py-1.5">
-          <DexterEyes size={26} color="#2191FB" />
-        </div>
-        <div className="absolute bottom-3 right-3 size-16 rounded-2xl border-4 border-[#1A1A1A] bg-[#FFF7EB] p-1.5 shadow-lg">
-          <div className="h-full w-full overflow-hidden rounded-xl">
-            <SpeciesStamp className={props.className} rarity={props.rarity} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatChip({
-  icon,
-  label,
-  value,
-  accent,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  accent: string;
-}) {
-  return (
-    <div
-      className="rounded-xl border-2 border-[#1A1A1A] px-2.5 py-2"
-      style={{ backgroundColor: `${accent}18` }}
-    >
-      <div className="flex items-center gap-1.5 text-black/68">{icon}</div>
-      <div className="mt-1 text-xs font-black uppercase tracking-[0.18em] text-black/45">
-        {label}
-      </div>
-      <div className="mt-1 truncate text-xs font-black uppercase tracking-[0.04em] text-[#1A1A1A]">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function DetailBlock({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: string;
-}) {
-  return (
-    <div
-      className="rounded-2xl border border-white/12 bg-white/8 px-3 py-3 backdrop-blur-sm"
-      style={accent ? { boxShadow: `inset 0 0 0 1px ${accent}40` } : undefined}
-    >
-      <div className="text-xs font-black uppercase tracking-[0.18em] text-white/45">
-        {label}
-      </div>
-      <div className="mt-1 truncate text-sm font-semibold text-white/88">{value}</div>
-    </div>
-  );
-}
-
-function RarityStars({ rarity }: { rarity: Rarity }) {
-  const count = {
-    common: 1,
-    uncommon: 2,
-    rare: 3,
-    epic: 4,
-    legendary: 5,
-  }[rarity];
-
-  return (
-    <div className="flex justify-end gap-0.5">
-      {Array.from({ length: count }).map((_, index) => (
-        <Star
-          key={index}
-          className="h-3.5 w-3.5 fill-[#1A1A1A] text-[#1A1A1A]"
-        />
-      ))}
-    </div>
-  );
-}
-
-function CardModal(
-  props: SpeciesCardProps & { open: boolean; onClose: () => void },
-) {
-  return (
+  return createPortal(
     <AnimatePresence>
       {props.open ? (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="species-modal-panel fixed inset-0 z-[9999] flex items-center justify-center bg-black/78 px-4"
+          transition={{ duration: 0.25 }}
+          className="fixed inset-0 z-[99999] flex flex-col items-center justify-center px-4 backdrop-blur-[6px]"
+          style={{
+            background: `rgba(0, 0, 0, 0.75)` // Semi-transparent backdrop with theme color tint
+          }}
           onClick={props.onClose}
         >
           <motion.div
-            initial={{ opacity: 0, y: 18, scale: 0.94 }}
+            initial={{ opacity: 0, y: 30, scale: 0.92 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.96 }}
-            transition={{ type: "spring", stiffness: 240, damping: 24 }}
-            className="w-full max-w-sm"
+            exit={{ opacity: 0, y: 15, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 260, damping: 26 }}
+            className="w-full max-w-[340px]"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="mb-4 flex justify-end">
-              <button
-                type="button"
-                onClick={props.onClose}
-                className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[#1A1A1A]"
-              >
-                <X className="h-4 w-4" />
-                Close
-              </button>
-            </div>
             <FlippableCard {...props} compact={false} />
-            <div className="mt-4 flex justify-center">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white">
-                <RotateCcw className="h-4 w-4" />
-                Tap card to flip
-              </div>
-            </div>
           </motion.div>
         </motion.div>
       ) : null}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
 
-function abbreviate(value: number) {
-  if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(1)}M`;
-  }
-  if (value >= 1_000) {
-    return `${Math.round(value / 1_000)}K`;
-  }
-  return `${value}`;
+// ==========================================
+// RARITY REVEAL ANIMATIONS (FRAMER MOTION)
+// ==========================================
+
+// Particle Bursts for premium reveals
+function BurstParticles({ color, count = 20 }: { color: string; count?: number }) {
+  const [particles] = useState<Array<{ id: number; x: number; y: number; scale: number; speed: number; angle: number }>>(() => {
+    return Array.from({ length: count }).map((_, id) => {
+      return {
+        id,
+        x: 0,
+        y: 0,
+        scale: Math.random() * 0.7 + 0.3,
+        speed: Math.random() * 120 + 60,
+        angle: Math.random() * Math.PI * 2,
+      };
+    });
+  });
+
+  return (
+    <div className="absolute inset-0 pointer-events-none z-30 flex items-center justify-center">
+      {particles.map((p) => {
+        const destX = Math.cos(p.angle) * p.speed;
+        const destY = Math.sin(p.angle) * p.speed;
+
+        return (
+          <motion.div
+            key={p.id}
+            initial={{ x: 0, y: 0, opacity: 1, scale: p.scale }}
+            animate={{ x: destX, y: destY, opacity: 0, scale: 0 }}
+            transition={{ duration: 1.2, ease: "easeOut" }}
+            className="absolute rounded-full"
+            style={{
+              width: 12,
+              height: 12,
+              backgroundColor: color,
+              boxShadow: `0 0 12px ${color}`,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
 }
 
-function formatCardNumber(scientificName: string) {
-  const seed = Array.from(scientificName).reduce(
-    (sum, char) => sum + char.charCodeAt(0),
-    0,
+export function RevealSpeciesCard(
+  props: SpeciesCardProps & {
+    containerClassName?: string;
+    cardHeightClass?: string;
+  },
+) {
+  const { rarity } = props;
+  const themeColor = rarityColors[rarity];
+
+  return (
+    <div className="relative w-full h-full flex items-center justify-center">
+      {/* ── COMMON REVEAL ── */}
+      {rarity === "common" && (
+        <motion.div
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 220, damping: 22 }}
+          className="w-full h-full"
+        >
+          <FlippableCard {...props} />
+        </motion.div>
+      )}
+
+      {/* ── UNCOMMON REVEAL ── */}
+      {rarity === "uncommon" && (
+        <motion.div
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 220, damping: 22 }}
+          className="relative w-full h-full"
+        >
+          <FlippableCard {...props} />
+          {/* Shimmer Overlay Fading Out */}
+          <motion.div
+            initial={{ opacity: 0.7 }}
+            animate={{ opacity: 0 }}
+            transition={{ duration: 1.2, delay: 0.4 }}
+            className="absolute inset-0 pointer-events-none rounded-2xl overflow-hidden"
+            style={{
+              background: `linear-gradient(135deg, transparent 30%, ${themeColor}40 50%, transparent 70%)`,
+              boxShadow: `inset 0px 0px 30px ${themeColor}60`,
+            }}
+          />
+        </motion.div>
+      )}
+
+      {/* ── RARE REVEAL ── */}
+      {rarity === "rare" && (
+        <div className="relative w-full h-full">
+          {/* Dark Overlay backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.45 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 bg-black z-10 pointer-events-none"
+          />
+          <motion.div
+            initial={{ y: 150, opacity: 0, scale: 0.8 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 180, damping: 20 }}
+            className="relative z-20 w-full h-full"
+          >
+            <FlippableCard {...props} />
+            <div
+              className="absolute inset-0 -z-10 rounded-2xl blur-2xl"
+              style={{
+                boxShadow: `0 0 60px 20px ${themeColor}33`,
+              }}
+            />
+            <BurstParticles color={themeColor} count={22} />
+          </motion.div>
+        </div>
+      )}
+
+      {/* ── EPIC REVEAL ── */}
+      {rarity === "epic" && (
+        <div className="relative w-full h-full">
+          {/* Full dark backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.65 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 bg-black z-10 pointer-events-none"
+          />
+          <motion.div
+            initial={{ scale: 0.3, opacity: 0, rotate: -8 }}
+            animate={{
+              scale: 1,
+              opacity: 1,
+              rotate: 0,
+              x: [0, -6, 6, -6, 6, -3, 3, 0],
+            }}
+            transition={{
+              scale: { type: "spring", stiffness: 160, damping: 18 },
+              x: { duration: 0.65, delay: 0.2 },
+            }}
+            className="relative z-20 w-full h-full"
+          >
+            <FlippableCard {...props} />
+            <motion.div
+              animate={{ opacity: [0.3, 0.75, 0.3] }}
+              transition={{ repeat: 2, duration: 1.0 }}
+              className="absolute inset-0 -z-10 rounded-3xl blur-3xl pointer-events-none"
+              style={{
+                boxShadow: `0 0 70px 25px ${themeColor}55`,
+              }}
+            />
+            <BurstParticles color={themeColor} count={30} />
+          </motion.div>
+        </div>
+      )}
+
+      {/* ── LEGENDARY REVEAL ── */}
+      {rarity === "legendary" && (
+        <LegendaryRevealWrapper props={props} themeColor={themeColor} />
+      )}
+    </div>
   );
-  return `${seed % 9999}`.padStart(4, "0");
 }
+
+// Legendary Reveal Timing Isolation
+function LegendaryRevealWrapper({ props, themeColor }: { props: SpeciesCardProps; themeColor: string }) {
+  const [stage, setStage] = useState<"lightning" | "flash" | "reveal">("lightning");
+
+  useEffect(() => {
+    const timer1 = setTimeout(() => {
+      setStage("flash");
+    }, 700);
+
+    const timer2 = setTimeout(() => {
+      setStage("reveal");
+    }, 850);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, []);
+
+  return (
+    <div className="relative w-full h-full flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/95 z-40 pointer-events-none" />
+
+      {stage === "lightning" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <motion.svg
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0, 1, 0, 1, 0] }}
+            transition={{ duration: 0.65 }}
+            viewBox="0 0 200 600"
+            className="w-48 h-full text-indigo-400 stroke-current fill-none"
+            strokeWidth="5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M 120,20 L 70,220 L 140,220 L 60,420 L 120,420 L 40,580" />
+          </motion.svg>
+        </div>
+      )}
+
+      {stage === "flash" && (
+        <div className="fixed inset-0 z-[100] bg-white pointer-events-none" />
+      )}
+
+      <motion.div
+        initial={{ y: 250, opacity: 0, scale: 0.7 }}
+        animate={stage === "reveal" ? { y: 0, opacity: 1, scale: 1 } : {}}
+        transition={{ type: "spring", stiffness: 120, damping: 22 }}
+        className="relative z-50 w-full h-full"
+        style={{ display: stage === "reveal" ? "block" : "none" }}
+      >
+        <FlippableCard {...props} />
+        <BurstParticles color={themeColor} count={40} />
+        <div
+          className="absolute inset-0 -z-10 rounded-2xl blur-3xl pointer-events-none"
+          style={{
+            boxShadow: `0 0 80px 30px ${themeColor}66`,
+          }}
+        />
+      </motion.div>
+    </div>
+  );
+}
+
+// ==========================================
+// STRING / DATE OBSERVATION UTILS
+// ==========================================
 
 function shortLocation(value?: string) {
   if (!value) return "Unknown";
   return value.split(",")[0] ?? value;
 }
 
-function formatCapturedAt(value?: string) {
+function formatDate(value?: string) {
   if (!value) return "Unlogged";
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatTime(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);

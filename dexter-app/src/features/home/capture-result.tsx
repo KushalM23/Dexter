@@ -63,6 +63,7 @@ export function HomeCaptureResult({
                   occurrenceCount={result.card.occurrenceCount}
                   locationLabel={result.collection?.captureLocationLabel}
                   capturedAt={result.collection?.capturedAt}
+                  gbifTaxonKey={result.card.gbifTaxonKey || result.collection?.gbifTaxonKey}
                 />
               </div>
               <p className="mt-12 max-w-72 text-sm italic leading-6 text-ink-muted font-medium drop-shadow-sm">
@@ -118,6 +119,7 @@ export function HomeCaptureResult({
                   lore={result.card.lore}
                   occurrenceCount={result.card.occurrenceCount}
                   locationLabel={result.card.scientificName}
+                  gbifTaxonKey={result.card.gbifTaxonKey}
                 />
               </div>
               <p className="mt-12 max-w-72 text-sm italic leading-6 text-ink-muted font-medium drop-shadow-sm">

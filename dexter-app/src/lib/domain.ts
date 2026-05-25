@@ -642,17 +642,55 @@ function rarityIndex(rarity: Rarity) {
   return rarityOrder.indexOf(rarity);
 }
 
-export function getRarityFromOccurrence(count: number): Rarity {
-  if (count > 1_000_000) {
+// ---------------------------------------------------------------------------
+// Domesticated / ubiquitous species override (always "common")
+// GBIF observation counts are meaningless for these — nobody uploads research
+// observations of their pet dog or themselves to a biodiversity database.
+// ---------------------------------------------------------------------------
+const ALWAYS_COMMON_SPECIES = new Set([
+  "homo sapiens",
+  "canis lupus familiaris",
+  "canis familiaris",
+  "felis catus",
+  "felis silvestris catus",
+  "columba livia domestica",
+  "rattus rattus",
+  "rattus norvegicus",
+  "mus musculus",
+  "bos taurus",
+  "bos indicus",
+  "gallus gallus domesticus",
+  "bubalus bubalis",
+  "capra aegagrus hircus",
+  "ovis aries",
+  "sus domesticus",
+  "equus caballus",
+]);
+
+export function getRarityFromOccurrence(
+  count: number,
+  scientificName?: string,
+): Rarity {
+  // Domesticated / ubiquitous species are always common regardless of GBIF data
+  if (scientificName && ALWAYS_COMMON_SPECIES.has(scientificName.toLowerCase())) {
     return "common";
   }
+
+  // Thresholds calibrated against real GBIF country-level data for India:
+  //   House Sparrow ~507K, House Crow ~1.2M, Pigeon ~1.1M = Common
+  //   Bengal Tiger ~4.6K, Spotted Deer ~3.5K = Uncommon
+  //   Indian Cobra ~1.8K = Uncommon
+  //   Truly rare wildlife < 100 = Legendary
   if (count > 100_000) {
-    return "uncommon";
+    return "common";
   }
   if (count > 10_000) {
-    return "rare";
+    return "uncommon";
   }
   if (count > 1_000) {
+    return "rare";
+  }
+  if (count > 100) {
     return "epic";
   }
   return "legendary";
@@ -1001,7 +1039,7 @@ async function ensureSpeciesCard(
   }
 
   // Determine base rarity from occurrence for the card record
-  const baseRarity = getRarityFromOccurrence(resolved.occurrenceCount);
+  const baseRarity = getRarityFromOccurrence(resolved.occurrenceCount, resolved.scientificName);
   const pixelArtUrl = await maybeGeneratePixelArt(
     resolved.commonName,
     resolved.scientificName,
@@ -2292,7 +2330,7 @@ export async function processCapture(
       location.countryCode,
     );
     const effectiveOccurrence = regionalOccurrence > 0 ? regionalOccurrence : species.occurrenceCount;
-    const rarity = getRarityFromOccurrence(effectiveOccurrence);
+    const rarity = getRarityFromOccurrence(effectiveOccurrence, species.scientificName);
     const xpValue = rarityXp[rarity];
     console.log(`[Capture] ⭐ Rarity: ${rarity.toUpperCase()} (${effectiveOccurrence.toLocaleString()} occurrences) → ${xpValue} XP`);
     const now = new Date().toISOString();

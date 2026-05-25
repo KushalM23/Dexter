@@ -77,7 +77,7 @@ export function HomeIdleState({
           <div className="absolute inset-0 pointer-events-none texture-overlay" aria-hidden="true" />
           
           <div className="relative z-10">
-            <div className="text-xs font-black uppercase tracking-[0.18em] text-white/70 drop-shadow-sm mb-4">
+            <div className="text-sm font-slackey tracking-[0.18em] text-white/70 drop-shadow-sm mb-4">
               Active challenges
             </div>
             
@@ -93,7 +93,7 @@ export function HomeIdleState({
                     {challenge.title}
                   </div>
                   <div 
-                    className="eyebrow-badge !font-bold bg-surface text-xs shadow-sm py-1 px-2.5 rounded-lg shrink-0"
+                    className="eyebrow-badge !font-slackey bg-surface text-xs shadow-sm py-1 px-2.5 rounded-lg shrink-0"
                     style={{ color: HOME_THEME.accent }}
                   >
                     {challenge.xpReward} XP
@@ -168,6 +168,7 @@ export function HomeIdleState({
                   occurrenceCount={entry.card.occurrenceCount}
                   locationLabel={entry.collection.captureLocationLabel}
                   capturedAt={entry.collection.capturedAt}
+                  gbifTaxonKey={entry.card.gbifTaxonKey || entry.collection.gbifTaxonKey}
                 />
               </div>
             ))}

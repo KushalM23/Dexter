@@ -19,6 +19,7 @@ export type HomeData = {
       xpAwarded: number;
       captureLocationLabel: string;
       capturedAt: string;
+      gbifTaxonKey?: number;
     };
     card: {
       commonName: string;
@@ -37,6 +38,7 @@ export type HomeData = {
       photoSource: PhotoSource;
       lore: string;
       occurrenceCount: number;
+      gbifTaxonKey?: number;
     };
   }>;
   activeChallenges: Array<{

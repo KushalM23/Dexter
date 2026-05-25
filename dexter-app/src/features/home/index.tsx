@@ -28,6 +28,8 @@ export function HomeScreen({ data }: { data: HomeData }) {
   const [result, setResult] = useState<CaptureResult | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [location, setLocation] = useState<{ lat?: number; lng?: number }>({});
+  const [locationStatus, setLocationStatus] = useState<"pending" | "granted" | "denied">("pending");
+  const [locationLabel, setLocationLabel] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [revealReady, setRevealReady] = useState(false);
   const [scanningPhraseIndex, setScanningPhraseIndex] = useState(0);
@@ -49,8 +51,11 @@ export function HomeScreen({ data }: { data: HomeData }) {
     streamRef.current = null;
   }
 
-  useEffect(() => {
-    if (!navigator.geolocation) return;
+  const requestLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationStatus("denied");
+      return;
+    }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -59,15 +64,28 @@ export function HomeScreen({ data }: { data: HomeData }) {
           lng: position.coords.longitude,
         };
         setLocation(nextLocation);
+        setLocationStatus("granted");
         fetch("/api/location", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(nextLocation),
-        }).catch(() => undefined);
+        })
+          .then((res) => res.json())
+          .then((data: { label?: string }) => {
+            if (data?.label) setLocationLabel(data.label);
+          })
+          .catch(() => undefined);
       },
-      () => undefined,
-      { enableHighAccuracy: false, timeout: 3000 },
+      () => {
+        setLocationStatus("denied");
+      },
+      { enableHighAccuracy: false, timeout: 5000 },
     );
+  };
+
+  useEffect(() => {
+    requestLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -205,6 +223,9 @@ export function HomeScreen({ data }: { data: HomeData }) {
           >
             <HomeIdleState
               data={data}
+              locationStatus={locationStatus}
+              locationLabel={locationLabel}
+              onRequestLocation={requestLocation}
               onViewChallenges={() => router.push("/challenges")}
               onViewDexe={() => router.push("/dexe")}
             />
