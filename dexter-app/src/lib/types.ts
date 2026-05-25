@@ -16,6 +16,7 @@ export type TabSlug =
 export type CaptureRejectReason =
   | "photo_of_screen"
   | "illustration"
+  | "non_animal"
   | "no_organism"
   | "toy_or_statue";
 

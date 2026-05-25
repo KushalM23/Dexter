@@ -192,42 +192,6 @@ export function SpeciesStamp({
         </>
       );
     }
-    if (className === "Plantae") {
-      return (
-        <>
-          <circle cx="60" cy="60" r="18" fill="#1A1A1A" />
-          {[0, 1, 2, 3, 4, 5].map((index) => (
-            <ellipse
-              key={index}
-              cx={60 + Math.cos((index / 6) * Math.PI * 2) * 28}
-              cy={60 + Math.sin((index / 6) * Math.PI * 2) * 28}
-              rx="14"
-              ry="18"
-              fill="#1A1A1A"
-              transform={`rotate(${index * 60} 60 60)`}
-            />
-          ))}
-          <path
-            d="M60 80V111"
-            stroke="#1A1A1A"
-            strokeWidth="8"
-            strokeLinecap="round"
-          />
-          <path
-            d="M60 93C47 90 43 82 42 73"
-            stroke="#1A1A1A"
-            strokeWidth="8"
-            strokeLinecap="round"
-          />
-          <path
-            d="M60 88C72 86 78 79 81 69"
-            stroke="#1A1A1A"
-            strokeWidth="8"
-            strokeLinecap="round"
-          />
-        </>
-      );
-    }
     if (className === "Fungi") {
       return (
         <>

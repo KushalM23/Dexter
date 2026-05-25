@@ -10,7 +10,6 @@ import { getThemeStyle } from "@/lib/theme";
 import { rarityColors } from "@/lib/constants";
 import { createPortal } from "react-dom";
 import { useState, useEffect } from "react";
-import { Settings } from "lucide-react";
 
 type HomeCaptureResultProps = {
   result: CaptureResult;
@@ -30,20 +29,17 @@ export function HomeCaptureResult({
   onResetToCamera,
 }: HomeCaptureResultProps) {
   const [mounted, setMounted] = useState(false);
-  const [showDevMenu, setShowDevMenu] = useState(false);
-  const [overrideRarity, setOverrideRarity] = useState<Rarity | null>(null);
-  const [revealKey, setRevealKey] = useState(0);
   const [localRevealReady, setLocalRevealReady] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const activeRarity = (overrideRarity || (
+  const activeRarity = (
     result.kind === "new" ? result.card.rarity :
     result.kind === "duplicate" ? result.card.rarity :
     "common"
-  )) as Rarity;
+  ) as Rarity;
 
   // Dynamically calculate the duration of the dramatic reveal sequence based on card rarity
   const revealDuration = {
@@ -64,7 +60,7 @@ export function HomeCaptureResult({
     }, revealDuration);
 
     return () => clearTimeout(timeout);
-  }, [activeRarity, revealKey, revealDuration, result.kind]);
+  }, [activeRarity, revealDuration, result.kind]);
 
   if (!mounted) return null;
 
@@ -135,77 +131,6 @@ export function HomeCaptureResult({
         className="theme-scope fixed inset-0 z-[99999] flex flex-col justify-between bg-[#0B0D13] text-white select-none overflow-hidden"
         style={getThemeStyle(HOME_THEME)}
       >
-        {/* Developer Sandbox Panel Gear Toggle */}
-        <div className="absolute top-6 right-6 z-[100001]">
-          <button
-            type="button"
-            onClick={() => setShowDevMenu(!showDevMenu)}
-            className="p-2.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 text-white/50 hover:text-white transition-all cursor-pointer active:scale-95 flex items-center justify-center font-bold"
-            title="Developer Rarity Test Sandbox"
-          >
-            <Settings className="w-5 h-5 animate-[spin_6s_linear_infinite] hover:animate-[spin_2s_linear_infinite]" />
-          </button>
-        </div>
-
-        {/* Developer Sandbox Panel Dropdown Menu */}
-        {showDevMenu && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute top-20 right-6 z-[100001] bg-[#151821]/95 border border-white/10 rounded-2xl p-4 w-60 shadow-2xl backdrop-blur-md"
-          >
-            <div className="text-[10px] font-slackey uppercase tracking-wider text-theme-accent mb-3 flex items-center justify-between">
-              <span>Rarity Sandbox</span>
-              <button 
-                onClick={() => {
-                  setOverrideRarity(null);
-                  setRevealKey(prev => prev + 1);
-                  setShowDevMenu(false);
-                }}
-                className="text-[9px] lowercase text-white/40 hover:text-white underline cursor-pointer"
-              >
-                reset
-              </button>
-            </div>
-            <div className="grid grid-cols-1 gap-1.5">
-              {(["common", "uncommon", "rare", "epic", "legendary"] as const).map((r) => {
-                const isActive = activeRarity === r;
-                const color = rarityColors[r];
-                return (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => {
-                      setOverrideRarity(r);
-                      setRevealKey((k) => k + 1);
-                    }}
-                    className="flex items-center justify-between w-full px-3 py-1.5 rounded-lg text-xs font-mono uppercase transition-all hover:bg-white/5 active:scale-[0.98] cursor-pointer"
-                    style={{
-                      border: `1px solid ${isActive ? color : "rgba(255,255,255,0.08)"}`,
-                      backgroundColor: isActive ? `${color}15` : "transparent",
-                      color: isActive ? color : "rgba(255,255,255,0.7)"
-                    }}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-                      {r}
-                    </span>
-                    {isActive && <span className="text-[9px] text-white/40">Active</span>}
-                  </button>
-                );
-              })}
-            </div>
-            
-            <button
-              type="button"
-              onClick={() => setRevealKey((k) => k + 1)}
-              className="mt-3.5 w-full py-2 bg-theme-accent/20 border border-theme-accent/40 rounded-xl text-xs font-mono text-theme-accent uppercase hover:bg-theme-accent/30 active:scale-[0.98] cursor-pointer transition-all"
-            >
-              Replay Animation
-            </button>
-          </motion.div>
-        )}
-
         {/* Mesh Overlay Grid for technical background vibe */}
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
 
@@ -235,7 +160,7 @@ export function HomeCaptureResult({
             {/* The Cinematic Species Card Reveal wrapper */}
             <div className="w-full max-w-[340px] drop-shadow-[0_15px_35px_rgba(0,0,0,0.65)] relative my-2">
               <RevealSpeciesCard
-                key={`${activeRarity}-${revealKey}`}
+                key={activeRarity}
                 commonName={result.card.commonName}
                 scientificName={result.card.scientificName}
                 kingdom={result.card.kingdom}
@@ -303,77 +228,6 @@ export function HomeCaptureResult({
         className="theme-scope fixed inset-0 z-[99999] flex flex-col justify-between bg-[#0B0D13] text-white select-none overflow-hidden"
         style={getThemeStyle(HOME_THEME)}
       >
-        {/* Developer Sandbox Panel Gear Toggle */}
-        <div className="absolute top-6 right-6 z-[100001]">
-          <button
-            type="button"
-            onClick={() => setShowDevMenu(!showDevMenu)}
-            className="p-2.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 text-white/50 hover:text-white transition-all cursor-pointer active:scale-95 flex items-center justify-center font-bold"
-            title="Developer Rarity Test Sandbox"
-          >
-            <Settings className="w-5 h-5 animate-[spin_6s_linear_infinite] hover:animate-[spin_2s_linear_infinite]" />
-          </button>
-        </div>
-
-        {/* Developer Sandbox Panel Dropdown Menu */}
-        {showDevMenu && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute top-20 right-6 z-[100001] bg-[#151821]/95 border border-white/10 rounded-2xl p-4 w-60 shadow-2xl backdrop-blur-md"
-          >
-            <div className="text-[10px] font-slackey uppercase tracking-wider text-theme-accent mb-3 flex items-center justify-between">
-              <span>Rarity Sandbox</span>
-              <button 
-                onClick={() => {
-                  setOverrideRarity(null);
-                  setRevealKey(prev => prev + 1);
-                  setShowDevMenu(false);
-                }}
-                className="text-[9px] lowercase text-white/40 hover:text-white underline cursor-pointer"
-              >
-                reset
-              </button>
-            </div>
-            <div className="grid grid-cols-1 gap-1.5">
-              {(["common", "uncommon", "rare", "epic", "legendary"] as const).map((r) => {
-                const isActive = activeRarity === r;
-                const color = rarityColors[r];
-                return (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => {
-                      setOverrideRarity(r);
-                      setRevealKey((k) => k + 1);
-                    }}
-                    className="flex items-center justify-between w-full px-3 py-1.5 rounded-lg text-xs font-mono uppercase transition-all hover:bg-white/5 active:scale-[0.98] cursor-pointer"
-                    style={{
-                      border: `1px solid ${isActive ? color : "rgba(255,255,255,0.08)"}`,
-                      backgroundColor: isActive ? `${color}15` : "transparent",
-                      color: isActive ? color : "rgba(255,255,255,0.7)"
-                    }}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-                      {r}
-                    </span>
-                    {isActive && <span className="text-[9px] text-white/40">Active</span>}
-                  </button>
-                );
-              })}
-            </div>
-            
-            <button
-              type="button"
-              onClick={() => setRevealKey((k) => k + 1)}
-              className="mt-3.5 w-full py-2 bg-theme-accent/20 border border-theme-accent/40 rounded-xl text-xs font-mono text-theme-accent uppercase hover:bg-theme-accent/30 active:scale-[0.98] cursor-pointer transition-all"
-            >
-              Replay Animation
-            </button>
-          </motion.div>
-        )}
-
         {/* Mesh Overlay Grid for technical background vibe */}
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
 
@@ -395,7 +249,7 @@ export function HomeCaptureResult({
 
             <div className="w-full max-w-[340px] grayscale-[0.12] drop-shadow-[0_15px_35px_rgba(0,0,0,0.55)] my-2">
               <RevealSpeciesCard
-                key={`${activeRarity}-${revealKey}`}
+                key={activeRarity}
                 commonName={result.card.commonName}
                 scientificName={result.card.scientificName}
                 kingdom={result.card.kingdom}

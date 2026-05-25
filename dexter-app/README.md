@@ -4,7 +4,7 @@ DexE is a mobile-first, vibrant, and collectible wildlife identification applica
 
 ## Features
 
-- **Capture & Identify**: Take photos of animals, plants, or insects and get real-time species identification.
+- **Capture & Identify**: Take photos of real animals, including birds and insects, and get real-time species identification.
 - **Collectible Cards**: Earn beautifully designed, color-coded species cards based on rarity (Common, Uncommon, Rare, Epic, Legendary).
 - **Gamification**: Complete challenges, maintain streaks, and earn XP to rank up on the global leaderboard.
 - **Dynamic Data**: Retrieves rich taxonomic data and lore from GBIF, iNaturalist, and Wikipedia automatically.

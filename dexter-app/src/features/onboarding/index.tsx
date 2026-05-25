@@ -252,10 +252,10 @@ export function OnboardingScreen({
             <button
               type="button"
               onClick={() => setStep(0)}
-              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-white/20 px-5 py-4 text-sm font-bold text-white backdrop-blur-sm transition-colors hover:bg-white/30"
+              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-white/20 px-5 py-4 text-sm text-white backdrop-blur-sm transition-colors hover:bg-white/30"
             >
-              <ArrowLeft className="h-4 w-4" />
-              Back
+              <ArrowLeft className="h-6 w-6" />
+              <span className="text-2xl font-display">Back</span>
             </button>
           </div>
         </motion.div>

@@ -89,6 +89,18 @@ export function HomeScreen({ data }: { data: HomeData }) {
   }, []);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).dexter_capture_active = mode !== "idle";
+      
+      // If we transition back to "idle" (i.e. user comes back home out of capture/result screens),
+      // dispatch a custom event to instantly check for challenges.
+      if (mode === "idle") {
+        window.dispatchEvent(new CustomEvent("check-challenges"));
+      }
+    }
+  }, [mode]);
+
+  useEffect(() => {
     if (mode !== "camera") {
       stopCamera();
       return;
