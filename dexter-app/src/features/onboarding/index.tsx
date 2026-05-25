@@ -24,7 +24,7 @@ export function OnboardingScreen({
   const handleComplete = async () => {
     setIsPending(true);
     try {
-      await fetch("/api/onboarding", {
+      const response = await fetch("/api/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -32,7 +32,12 @@ export function OnboardingScreen({
           avatarId: selectedAvatar,
         }),
       });
-      router.refresh();
+
+      if (!response.ok) {
+        throw new Error("Onboarding completion failed.");
+      }
+
+      router.replace("/home");
     } catch {
       setIsPending(false);
     }

@@ -19,6 +19,7 @@ type CollectionItem = {
     xpAwarded: number;
     captureLocationLabel: string;
     capturedAt: string;
+    gbifTaxonKey?: number;
   };
   card: {
     commonName: string;
@@ -37,6 +38,7 @@ type CollectionItem = {
     photoSource: PhotoSource;
     lore: string;
     occurrenceCount: number;
+    gbifTaxonKey?: number;
   };
 };
 
@@ -294,6 +296,7 @@ export function CollectionScreen({ items }: { items: CollectionItem[] }) {
               occurrenceCount={item.card.occurrenceCount}
               locationLabel={item.collection.captureLocationLabel}
               capturedAt={item.collection.capturedAt}
+              gbifTaxonKey={item.card.gbifTaxonKey || item.collection.gbifTaxonKey}
             />
           ))}
         </div>

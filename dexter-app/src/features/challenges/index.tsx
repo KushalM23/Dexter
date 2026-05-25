@@ -308,10 +308,18 @@ export function ChallengesScreen({
                             opacity: 1,
                           },
                           transition: {
-                            type: "spring",
-                            stiffness: 140,
-                            damping: 11,
-                            duration: 1.3,
+                            scale: {
+                              duration: 0.6,
+                              ease: "easeInOut",
+                            },
+                            y: {
+                              type: "spring",
+                              stiffness: 140,
+                              damping: 11,
+                            },
+                            opacity: {
+                              duration: 0.3,
+                            }
                           },
                         }
                       : {

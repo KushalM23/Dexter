@@ -19,6 +19,7 @@ export type HomeData = {
       xpAwarded: number;
       captureLocationLabel: string;
       capturedAt: string;
+      gbifTaxonKey?: number;
     };
     card: {
       commonName: string;
@@ -37,17 +38,14 @@ export type HomeData = {
       photoSource: PhotoSource;
       lore: string;
       occurrenceCount: number;
+      gbifTaxonKey?: number;
     };
   }>;
-  activeChallenge: {
+  activeChallenges: Array<{
     id: string;
     title: string;
-    description: string;
     xpReward: number;
-    progress: number;
-    targetCount: number;
-    expiresLabel: string;
-  } | null;
+  }>;
 };
 
 export type HomeScreenMode =

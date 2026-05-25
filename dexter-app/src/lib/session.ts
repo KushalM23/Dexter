@@ -12,7 +12,7 @@ export async function getCurrentUser() {
       return null;
     }
 
-    return ensureUserSetup(data.user);
+    return ensureUserSetup(data.user, { ensureChallenges: false });
   } catch {
     // Gracefully handle auth errors (expired tokens, network issues, etc.)
     return null;
