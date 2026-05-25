@@ -231,7 +231,8 @@ const WEEKLY_ROTATION_ANCHOR = new Date(2026, 4, 25);
 const SUPABASE_PAGE_SIZE = 1000;
 
 function challengeProgressGroupKey(progress: UserChallengeProgressRecord) {
-  return `${progress.challengeId}:${progress.expiresAt ?? "permanent"}`;
+  const expiresIso = progress.expiresAt ? new Date(progress.expiresAt).toISOString() : "permanent";
+  return `${progress.challengeId}:${expiresIso}`;
 }
 
 function scheduledChallengeKey(
@@ -239,7 +240,9 @@ function scheduledChallengeKey(
   assignedAt: string,
   expiresAt: string | null,
 ) {
-  return `${challengeId}:${assignedAt}:${expiresAt ?? "permanent"}`;
+  const assignedIso = new Date(assignedAt).toISOString();
+  const expiresIso = expiresAt ? new Date(expiresAt).toISOString() : "permanent";
+  return `${challengeId}:${assignedIso}:${expiresIso}`;
 }
 
 function positiveModulo(value: number, divisor: number) {

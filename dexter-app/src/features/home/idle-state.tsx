@@ -16,6 +16,9 @@ type HomeIdleStateProps = {
   data: HomeData;
   onViewChallenges: () => void;
   onViewDexe: () => void;
+  locationStatus?: "pending" | "granted" | "denied";
+  locationLabel?: string | null;
+  onRequestLocation?: () => void;
 };
 
 export function HomeIdleState({

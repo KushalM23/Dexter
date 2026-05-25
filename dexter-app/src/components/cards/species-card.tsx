@@ -822,9 +822,19 @@ function FlippableCard(
   props: SpeciesCardProps & {
     containerClassName?: string;
     cardHeightClass?: string;
+    initialRotation?: number;
   },
 ) {
-  const [rotation, setRotation] = useState(0);
+  const [rotation, setRotation] = useState(props.initialRotation ?? 0);
+
+  useEffect(() => {
+    if (props.initialRotation !== undefined) {
+      const timer = setTimeout(() => {
+        setRotation(0);
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [props.initialRotation]);
 
   return (
     <div
@@ -922,46 +932,7 @@ function CardModal(props: SpeciesCardProps & { open: boolean; onClose: () => voi
 // RARITY REVEAL ANIMATIONS (FRAMER MOTION)
 // ==========================================
 
-// Particle Bursts for premium reveals
-function BurstParticles({ color, count = 20 }: { color: string; count?: number }) {
-  const [particles] = useState<Array<{ id: number; x: number; y: number; scale: number; speed: number; angle: number }>>(() => {
-    return Array.from({ length: count }).map((_, id) => {
-      return {
-        id,
-        x: 0,
-        y: 0,
-        scale: Math.random() * 0.7 + 0.3,
-        speed: Math.random() * 120 + 60,
-        angle: Math.random() * Math.PI * 2,
-      };
-    });
-  });
 
-  return (
-    <div className="absolute inset-0 pointer-events-none z-30 flex items-center justify-center">
-      {particles.map((p) => {
-        const destX = Math.cos(p.angle) * p.speed;
-        const destY = Math.sin(p.angle) * p.speed;
-
-        return (
-          <motion.div
-            key={p.id}
-            initial={{ x: 0, y: 0, opacity: 1, scale: p.scale }}
-            animate={{ x: destX, y: destY, opacity: 0, scale: 0 }}
-            transition={{ duration: 1.2, ease: "easeOut" }}
-            className="absolute rounded-full"
-            style={{
-              width: 12,
-              height: 12,
-              backgroundColor: color,
-              boxShadow: `0 0 12px ${color}`,
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
 
 export function RevealSpeciesCard(
   props: SpeciesCardProps & {
@@ -973,177 +944,524 @@ export function RevealSpeciesCard(
   const themeColor = rarityColors[rarity];
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center">
-      {/* ── COMMON REVEAL ── */}
-      {rarity === "common" && (
+    <DramaticRevealWrapper props={props} themeColor={themeColor} />
+  );
+}
+
+// Rarity Cinematic configuration detailing distinct, highly dramatic stages for each tier
+type RarityCinematicConfig = {
+  rumbleClass: string;
+  suspenseDuration: number;
+  particleCount: number;
+  suspenseVortex: boolean; // Concentric stardust vortex converging into core (Legendary only)
+  suspenseRings: boolean;  // Converging contracting energy rings (Epic & Legendary)
+  shockwaveCount: boolean; // Multiple shockwaves (Rare, Epic, Legendary)
+  continuousAura: boolean; // Continuous upward sparkles on idle float (Epic & Legendary)
+  lensFlare: boolean;      // Rotating energy rays behind revealed card (Rare, Epic, Legendary)
+  // Highly premium progressive fields for distinct 5-tier animation hierarchy
+  stiffness: number;       // Spring drop landing weight stiffness
+  damping: number;         // Spring drop landing weight damping
+  suspenseScale: number[]; // Aggressive pulsing scale array during suspense
+  suspenseRotate: number[];// Shaking wobble rotation array during suspense
+  pulseDuration: string;   // Spinning core pulse rate
+  spinDuration: string;    // Spinning core vector ring rotation speed
+  flashStyle: "white" | "epic" | "legendary"; // Color overlays style for climax flash-bangs
+};
+
+const rarityCinematics: Record<Rarity, RarityCinematicConfig> = {
+  common: {
+    rumbleClass: "animate-rumble-mild",
+    suspenseDuration: 1000,
+    particleCount: 15,
+    suspenseVortex: false,
+    suspenseRings: false,
+    shockwaveCount: false,
+    continuousAura: false,
+    lensFlare: false,
+    stiffness: 110,
+    damping: 18,
+    suspenseScale: [0.85, 1.0],
+    suspenseRotate: [0, 0],
+    pulseDuration: "2.5s",
+    spinDuration: "12s",
+    flashStyle: "white",
+  },
+  uncommon: {
+    rumbleClass: "animate-rumble-mild",
+    suspenseDuration: 1400,
+    particleCount: 28,
+    suspenseVortex: false,
+    suspenseRings: false,
+    shockwaveCount: true, // Enables a single green shockwave ring ripple
+    continuousAura: false,
+    lensFlare: false,
+    stiffness: 140,
+    damping: 15,
+    suspenseScale: [0.85, 1.02],
+    suspenseRotate: [0, -0.5, 0.5, 0],
+    pulseDuration: "2.0s",
+    spinDuration: "7s",
+    flashStyle: "white",
+  },
+  rare: {
+    rumbleClass: "animate-rumble-strong",
+    suspenseDuration: 1900,
+    particleCount: 45,
+    suspenseVortex: false,
+    suspenseRings: false,
+    shockwaveCount: true,
+    continuousAura: false,
+    lensFlare: true,
+    stiffness: 180,
+    damping: 12,
+    suspenseScale: [0.85, 1.06],
+    suspenseRotate: [0, -2, 2, -2, 2, 0],
+    pulseDuration: "1.0s",
+    spinDuration: "3.5s",
+    flashStyle: "white",
+  },
+  epic: {
+    rumbleClass: "animate-rumble-strong",
+    suspenseDuration: 2400,
+    particleCount: 65,
+    suspenseVortex: false,
+    suspenseRings: true,
+    shockwaveCount: true,
+    continuousAura: true,
+    lensFlare: true,
+    stiffness: 230,
+    damping: 10,
+    suspenseScale: [0.82, 1.15, 0.94, 1.2],
+    suspenseRotate: [0, -4, 4, -4, 4, -5, 5, 0],
+    pulseDuration: "0.4s",
+    spinDuration: "1.2s",
+    flashStyle: "epic",
+  },
+  legendary: {
+    rumbleClass: "animate-rumble-catastrophic",
+    suspenseDuration: 3200,
+    particleCount: 110, // Incredible supernova explosion
+    suspenseVortex: true,
+    suspenseRings: true,
+    shockwaveCount: true,
+    continuousAura: true,
+    lensFlare: true,
+    stiffness: 300,
+    damping: 7, // Violent bounce landing
+    suspenseScale: [0.82, 1.25, 0.85, 1.35, 1.05, 1.42], // Violent heart pulsing cosmic core compression
+    suspenseRotate: [0, -7, 7, -8, 8, -9, 9, -10, 10, 0], // Catastrophic twisting
+    pulseDuration: "0.18s",
+    spinDuration: "0.5s",
+    flashStyle: "legendary",
+  },
+};
+
+
+// Concentric contracted rings for Epic & Legendary suspense stage (clean vector design)
+function SuspenseEnergyRings({ color }: { color: string }) {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-25 flex items-center justify-center">
+      {Array.from({ length: 3 }).map((_, i) => (
         <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 220, damping: 22 }}
-          className="w-full h-full"
-        >
-          <FlippableCard {...props} />
-        </motion.div>
-      )}
-
-      {/* ── UNCOMMON REVEAL ── */}
-      {rarity === "uncommon" && (
-        <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 220, damping: 22 }}
-          className="relative w-full h-full"
-        >
-          <FlippableCard {...props} />
-          {/* Shimmer Overlay Fading Out */}
-          <motion.div
-            initial={{ opacity: 0.7 }}
-            animate={{ opacity: 0 }}
-            transition={{ duration: 1.2, delay: 0.4 }}
-            className="absolute inset-0 pointer-events-none rounded-2xl overflow-hidden"
-            style={{
-              background: `linear-gradient(135deg, transparent 30%, ${themeColor}40 50%, transparent 70%)`,
-              boxShadow: `inset 0px 0px 30px ${themeColor}60`,
-            }}
-          />
-        </motion.div>
-      )}
-
-      {/* ── RARE REVEAL ── */}
-      {rarity === "rare" && (
-        <div className="relative w-full h-full">
-          {/* Dark Overlay backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.45 }}
-            transition={{ duration: 0.5 }}
-            className="fixed inset-0 bg-black z-10 pointer-events-none"
-          />
-          <motion.div
-            initial={{ y: 150, opacity: 0, scale: 0.8 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            transition={{ type: "spring", stiffness: 180, damping: 20 }}
-            className="relative z-20 w-full h-full"
-          >
-            <FlippableCard {...props} />
-            <div
-              className="absolute inset-0 -z-10 rounded-2xl blur-2xl"
-              style={{
-                boxShadow: `0 0 60px 20px ${themeColor}33`,
-              }}
-            />
-            <BurstParticles color={themeColor} count={22} />
-          </motion.div>
-        </div>
-      )}
-
-      {/* ── EPIC REVEAL ── */}
-      {rarity === "epic" && (
-        <div className="relative w-full h-full">
-          {/* Full dark backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.65 }}
-            transition={{ duration: 0.5 }}
-            className="fixed inset-0 bg-black z-10 pointer-events-none"
-          />
-          <motion.div
-            initial={{ scale: 0.3, opacity: 0, rotate: -8 }}
-            animate={{
-              scale: 1,
-              opacity: 1,
-              rotate: 0,
-              x: [0, -6, 6, -6, 6, -3, 3, 0],
-            }}
-            transition={{
-              scale: { type: "spring", stiffness: 160, damping: 18 },
-              x: { duration: 0.65, delay: 0.2 },
-            }}
-            className="relative z-20 w-full h-full"
-          >
-            <FlippableCard {...props} />
-            <motion.div
-              animate={{ opacity: [0.3, 0.75, 0.3] }}
-              transition={{ repeat: 2, duration: 1.0 }}
-              className="absolute inset-0 -z-10 rounded-3xl blur-3xl pointer-events-none"
-              style={{
-                boxShadow: `0 0 70px 25px ${themeColor}55`,
-              }}
-            />
-            <BurstParticles color={themeColor} count={30} />
-          </motion.div>
-        </div>
-      )}
-
-      {/* ── LEGENDARY REVEAL ── */}
-      {rarity === "legendary" && (
-        <LegendaryRevealWrapper props={props} themeColor={themeColor} />
-      )}
+          key={i}
+          initial={{ scale: 1.8, opacity: 0 }}
+          animate={{ scale: 0.1, opacity: [0, 0.75, 0] }}
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+            delay: i * 0.5,
+            ease: "easeIn",
+          }}
+          className="absolute w-56 h-56 rounded-full border-2"
+          style={{
+            borderColor: color,
+            boxShadow: `0 0 15px ${color}`,
+          }}
+        />
+      ))}
     </div>
   );
 }
 
-// Legendary Reveal Timing Isolation
-function LegendaryRevealWrapper({ props, themeColor }: { props: SpeciesCardProps; themeColor: string }) {
-  const [stage, setStage] = useState<"lightning" | "flash" | "reveal">("lightning");
+// Expanding outline ring shockwaves centered dynamically relative to card visual core
+function ShockwaveRing({ 
+  color, 
+  delay = 0, 
+  maxScale = 2.4, 
+  duration = 0.8 
+}: { 
+  color: string; 
+  delay?: number; 
+  maxScale?: number; 
+  duration?: number; 
+}) {
+  return (
+    <motion.div
+      initial={{ scale: 0.1, opacity: 0.85, x: "-50%", y: "-50%" }}
+      animate={{ scale: maxScale, opacity: 0, x: "-50%", y: "-50%" }}
+      transition={{ duration, ease: "easeOut", delay }}
+      className="absolute left-1/2 top-1/2 w-64 h-64 rounded-full border-4 pointer-events-none z-40"
+      style={{
+        borderColor: color,
+        boxShadow: `0 0 45px ${color}, inset 0 0 45px ${color}`,
+        filter: "blur(1.5px)",
+      }}
+    />
+  );
+}
+
+
+
+// Cinematic energy rays sweep overlay behind revealed cards
+function CinematicEnergyRays({ color }: { color: string }) {
+  return (
+    <div className="absolute -inset-28 -z-20 pointer-events-none overflow-hidden flex items-center justify-center opacity-35 select-none">
+      <svg viewBox="0 0 200 200" className="w-full h-full animate-[energy-spin_35s_infinite_linear]">
+        {Array.from({ length: 16 }).map((_, i) => {
+          const angle = (i * 360) / 16;
+          return (
+            <path
+              key={i}
+              d="M 100 100 L 195 82 L 195 118 Z"
+              fill={color}
+              transform={`rotate(${angle} 100 100)`}
+              style={{ mixBlendMode: "screen", opacity: i % 2 === 0 ? 0.35 : 0.6 }}
+            />
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+
+// Gorgeous customized DexE Mystery Card Back shown face-down during the violent rumble suspense phase
+function DexECardBack({ 
+  rarity, 
+  pulseDuration, 
+  spinDuration 
+}: { 
+  rarity: Rarity; 
+  pulseDuration?: string; 
+  spinDuration?: string; 
+}) {
+  const themeColor = rarityColors[rarity];
+
+  // Escalating pulsing speeds representing higher energetic density prior to reveal
+  const activePulse = pulseDuration || {
+    common: "2.5s",
+    uncommon: "2.0s",
+    rare: "1.2s",
+    epic: "0.6s",
+    legendary: "0.3s",
+  }[rarity];
+
+  // Swirling ring rotation speed accelerates dramatically for higher tiers
+  const activeSpin = spinDuration || {
+    common: "8s",
+    uncommon: "6s",
+    rare: "3s",
+    epic: "1.5s",
+    legendary: "0.7s",
+  }[rarity];
+
+  return (
+    <div
+      className="relative h-full w-full overflow-hidden rounded-2xl border-4 border-[#000000] p-4 flex flex-col justify-between shadow-[8px_8px_0px_#000000] bg-[#0B0D13] select-none"
+    >
+      <CardGlareOverlay />
+      
+      {/* Mesh Overlay Grid */}
+      <div className="absolute inset-0 opacity-15 bg-[linear-gradient(to_right,#333_1px,transparent_1px),linear-gradient(to_bottom,#333_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
+
+      {/* Cyber Brackets in Corners */}
+      <div className="absolute top-2.5 left-2.5 w-4.5 h-4.5 border-t-2 border-l-2 border-white/20" />
+      <div className="absolute top-2.5 right-2.5 w-4.5 h-4.5 border-t-2 border-r-2 border-white/20" />
+      <div className="absolute bottom-2.5 left-2.5 w-4.5 h-4.5 border-b-2 border-l-2 border-white/20" />
+      <div className="absolute bottom-2.5 right-2.5 w-4.5 h-4.5 border-b-2 border-r-2 border-white/20" />
+
+      <div className="flex-1 flex flex-col items-center justify-center relative">
+        {/* Pulsing colored energy bloom behind emblem */}
+        <div 
+          className="absolute w-36 h-36 rounded-full blur-3xl opacity-50 animate-[backdrop-pulse_2s_infinite]"
+          style={{ backgroundColor: themeColor, animationDuration: activePulse }}
+        />
+        
+        {/* Swirling vector rings */}
+        <div className="relative w-28 h-28 flex items-center justify-center">
+          <svg 
+            viewBox="0 0 100 100" 
+            className="w-full h-full animate-[energy-spin_8s_infinite_linear] opacity-75"
+            style={{ animationDuration: activeSpin }}
+          >
+            <circle cx="50" cy="50" r="45" stroke={themeColor} strokeWidth="1.5" fill="none" strokeDasharray="6, 8" />
+            <circle cx="50" cy="50" r="38" stroke="rgba(255,255,255,0.15)" strokeWidth="1" fill="none" />
+            <path d="M 50,4 L 53,14 L 47,14 Z" fill={themeColor} />
+            <path d="M 50,96 L 53,86 L 47,86 Z" fill={themeColor} />
+            <path d="M 4,50 L 14,53 L 14,47 Z" fill={themeColor} />
+            <path d="M 96,50 L 86,53 L 86,47 Z" fill={themeColor} />
+          </svg>
+          
+          {/* Inner core circle containing the spinning compass */}
+          <div 
+            className="absolute w-18 h-18 rounded-full border-3 bg-[#151821] flex items-center justify-center shadow-lg"
+            style={{ borderColor: themeColor }}
+          >
+            <Compass className="h-9 w-9 text-white animate-pulse" style={{ color: themeColor }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="text-center font-slackey text-[10.5px] uppercase tracking-[0.25em] text-white/35 mb-1.5 z-10">
+        D E X E &nbsp; C O R E
+      </div>
+    </div>
+  );
+}
+
+// Comprehensive, highly premium multi-stage card reveal wrapper
+function DramaticRevealWrapper({ props, themeColor }: { props: SpeciesCardProps; themeColor: string }) {
+  const { rarity } = props;
+  const [stage, setStage] = useState<"suspense" | "flash" | "reveal">("suspense");
+  const [mounted, setMounted] = useState(false);
+
+  // Get active rarity configuration details
+  const config = rarityCinematics[rarity];
 
   useEffect(() => {
+    setMounted(true);
+
+    // Stage 1 -> Stage 2 (Climax Screen Flash)
     const timer1 = setTimeout(() => {
       setStage("flash");
-    }, 700);
+    }, config.suspenseDuration);
 
+    // Stage 2 -> Stage 3 (Front Face Card Drop & Particle Explosion)
     const timer2 = setTimeout(() => {
       setStage("reveal");
-    }, 850);
+    }, config.suspenseDuration + 140);
 
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
     };
-  }, []);
+  }, [config.suspenseDuration]);
+
+  // Render background overlays and climax flashes at the document root to escape transformed containers
+  const renderBackdropAndFlash = () => {
+    if (typeof window === "undefined" || !document.body) return null;
+    return createPortal(
+      <>
+        {/* Full-screen backdrop overlay */}
+        <div className="fixed inset-0 bg-black/85 z-10 pointer-events-none transition-opacity duration-700" />
+        
+        {/* Full-screen flash climax overlay - animated with epic flash pulses for rare tiers */}
+        {stage === "flash" && (
+          <motion.div 
+            initial={{ opacity: 1 }}
+            animate={
+              config.flashStyle === "legendary"
+                ? { opacity: [1, 0, 1, 0] } // Supernova double strobe flash-bang
+                : config.flashStyle === "epic"
+                  ? { opacity: [1, 0.2, 1] } // Fast high-intensity single strobe pulse
+                  : { opacity: 1 }
+            }
+            transition={{ duration: 0.14, ease: "easeInOut" }}
+            className="fixed inset-0 z-40 pointer-events-none" 
+            style={{ backgroundColor: rarity === "legendary" || rarity === "epic" ? themeColor : "#FFFFFF" }}
+          />
+        )}
+      </>,
+      document.body
+    );
+  };
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/95 z-40 pointer-events-none" />
+    <div className="relative w-full h-full flex items-center justify-center select-none overflow-visible">
+      <AnimationStyles />
 
-      {stage === "lightning" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-          <motion.svg
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 1, 0, 1, 0, 1, 0] }}
-            transition={{ duration: 0.65 }}
-            viewBox="0 0 200 600"
-            className="w-48 h-full text-indigo-400 stroke-current fill-none"
-            strokeWidth="5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M 120,20 L 70,220 L 140,220 L 60,420 L 120,420 L 40,580" />
-          </motion.svg>
-        </div>
-      )}
+      {/* Render Backdrop & Flash safely */}
+      {renderBackdropAndFlash()}
 
-      {stage === "flash" && (
-        <div className="fixed inset-0 z-[100] bg-white pointer-events-none" />
-      )}
-
-      <motion.div
-        initial={{ y: 250, opacity: 0, scale: 0.7 }}
-        animate={stage === "reveal" ? { y: 0, opacity: 1, scale: 1 } : {}}
-        transition={{ type: "spring", stiffness: 120, damping: 22 }}
-        className="relative z-50 w-full h-full"
-        style={{ display: stage === "reveal" ? "block" : "none" }}
-      >
-        <FlippableCard {...props} />
-        <BurstParticles color={themeColor} count={40} />
-        <div
-          className="absolute inset-0 -z-10 rounded-2xl blur-3xl pointer-events-none"
-          style={{
-            boxShadow: `0 0 80px 30px ${themeColor}66`,
+      {/* ── STAGE 1: SUSPENSE STAGE ── */}
+      {stage === "suspense" && (
+        <motion.div
+          initial={{ scale: 0.82, opacity: 0, rotate: 0 }}
+          animate={{ 
+            scale: config.suspenseScale,
+            rotate: config.suspenseRotate,
+            opacity: 1
           }}
-        />
-      </motion.div>
+          transition={{
+            duration: config.suspenseDuration / 1000,
+            ease: "easeInOut"
+          }}
+          className={`relative z-50 w-full aspect-[3/4.5] ${config.rumbleClass}`}
+        >
+          {/* Rarity-specific energy ring overlays (clean vector design) */}
+          {config.suspenseRings && <SuspenseEnergyRings color={themeColor} />}
+          
+          <DexECardBack 
+            rarity={rarity} 
+            pulseDuration={config.pulseDuration} 
+            spinDuration={config.spinDuration} 
+          />
+        </motion.div>
+      )}
+
+      {/* ── STAGE 3: REVEAL STAGE ── */}
+      {stage === "reveal" && (
+        <motion.div
+          initial={{ y: -80, opacity: 0, scale: 1.25 }}
+          animate={{ 
+            y: 0, 
+            opacity: 1, 
+            scale: [1.25, 0.96, 1]
+          }}
+          transition={{
+            y: { type: "spring", stiffness: config.stiffness, damping: config.damping },
+            scale: { duration: 0.6, ease: "easeOut" }
+          }}
+          className="relative z-50 w-full max-w-[340px] mx-auto float-idle hover:scale-[1.02] transition-transform duration-300"
+        >
+          {/* Rarity rotating background energy rays */}
+          {config.lensFlare && <CinematicEnergyRays color={themeColor} />}
+
+          {/* Flippable card itself with automatic 3D spin-on-mount rotation */}
+          <FlippableCard {...props} initialRotation={180} />
+
+          {/* Radial lens glow behind the card */}
+          <div
+            className="absolute inset-0 -z-10 rounded-3xl blur-3xl pointer-events-none opacity-85 transition-opacity"
+            style={{
+              boxShadow: `0 0 80px 25px ${themeColor}77`,
+            }}
+          />
+
+          {/* Centered Expanding concentric shockwave ripples as the main blast effect */}
+          <ShockwaveRing 
+            color={themeColor} 
+            delay={0} 
+            maxScale={rarity === "common" ? 2.2 : rarity === "uncommon" ? 2.4 : rarity === "rare" ? 2.6 : rarity === "epic" ? 2.8 : 3.2} 
+          />
+          
+          {rarity !== "common" && (
+            <ShockwaveRing 
+              color={themeColor} 
+              delay={0.12} 
+              maxScale={rarity === "uncommon" ? 2.3 : rarity === "rare" ? 2.5 : rarity === "epic" ? 2.7 : 3.0} 
+            />
+          )}
+
+          {["rare", "epic", "legendary"].includes(rarity) && (
+            <ShockwaveRing 
+              color={themeColor} 
+              delay={0.2} 
+              maxScale={rarity === "rare" ? 2.4 : rarity === "epic" ? 2.6 : 2.8} 
+            />
+          )}
+
+          {["epic", "legendary"].includes(rarity) && (
+            <ShockwaveRing 
+              color={themeColor} 
+              delay={0.28} 
+              maxScale={rarity === "epic" ? 2.5 : 2.9} 
+            />
+          )}
+
+          {rarity === "legendary" && (
+            <ShockwaveRing 
+              color={themeColor} 
+              delay={0.36} 
+              maxScale={3.1} 
+            />
+          )}
+        </motion.div>
+      )}
     </div>
+  );
+}
+
+// Injects the premium rumble keyframes and physics particle CSS classes
+function AnimationStyles() {
+  return (
+    <style>{`
+      @keyframes card-rumble-mild {
+        0% { transform: translate(0px, 0px) rotate(0deg); }
+        20% { transform: translate(-1.5px, -1.5px) rotate(-0.5deg); }
+        40% { transform: translate(2px, 1.5px) rotate(0.5deg); }
+        60% { transform: translate(-2px, 2px) rotate(-1deg); }
+        80% { transform: translate(1.5px, -1.5px) rotate(1deg); }
+        100% { transform: translate(0px, 0px) rotate(0deg); }
+      }
+      @keyframes card-rumble-strong {
+        0% { transform: translate(0px, 0px) rotate(0deg); }
+        10% { transform: translate(-3px, -3px) rotate(-1.5deg); }
+        30% { transform: translate(3.5px, 2px) rotate(1.5deg); }
+        50% { transform: translate(-4px, 3px) rotate(-2.5deg); }
+        70% { transform: translate(4px, -3px) rotate(2.5deg); }
+        90% { transform: translate(-3px, 3px) rotate(-1.5deg); }
+        100% { transform: translate(0px, 0px) rotate(0deg); }
+      }
+      @keyframes card-rumble-catastrophic {
+        0% { transform: translate(0px, 0px) rotate(0deg); }
+        10% { transform: translate(-6px, -5px) rotate(-2.5deg); }
+        20% { transform: translate(6px, 4px) rotate(3deg); }
+        30% { transform: translate(-7px, 6px) rotate(-3.5deg); }
+        40% { transform: translate(7px, -5px) rotate(3.5deg); }
+        50% { transform: translate(-6px, 6px) rotate(-3deg); }
+        60% { transform: translate(7px, 7px) rotate(4deg); }
+        70% { transform: translate(-7px, -6px) rotate(-3.5deg); }
+        80% { transform: translate(8px, 7px) rotate(4.5deg); }
+        90% { transform: translate(-8px, 6px) rotate(-4deg); }
+        100% { transform: translate(0px, 0px) rotate(0deg); }
+      }
+      @keyframes backdrop-pulse {
+        0% { opacity: 0.35; transform: scale(0.95); }
+        50% { opacity: 0.95; transform: scale(1.25); }
+        100% { opacity: 0.35; transform: scale(0.95); }
+      }
+      @keyframes energy-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes float-rising {
+        0% { transform: translateY(115%) scale(0); opacity: 0; }
+        15% { opacity: 0.85; }
+        85% { opacity: 0.85; }
+        100% { transform: translateY(-15%) scale(1.4); opacity: 0; }
+      }
+      @keyframes holo-sheen {
+        0% { background-position: -200% -200%; }
+        100% { background-position: 300% 300%; }
+      }
+      @keyframes float-idle {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-6px); }
+        100% { transform: translateY(0px); }
+      }
+      .animate-rumble-mild {
+        animation: card-rumble-mild 0.12s infinite ease-in-out;
+      }
+      .animate-rumble-strong {
+        animation: card-rumble-strong 0.09s infinite ease-in-out;
+      }
+      .animate-rumble-catastrophic {
+        animation: card-rumble-catastrophic 0.06s infinite ease-in-out;
+      }
+      .animate-holo-sheen {
+        background: linear-gradient(135deg, transparent 35%, rgba(255,255,255,0.45) 50%, transparent 65%);
+        background-size: 250% 250%;
+        animation: holo-sheen 3.2s infinite ease-in-out;
+        mix-blend-mode: overlay;
+      }
+      .animate-float-rising {
+        animation: float-rising var(--float-duration, 2s) infinite linear;
+      }
+      .float-idle {
+        animation: float-idle 3.5s infinite ease-in-out;
+      }
+    `}</style>
   );
 }
 
