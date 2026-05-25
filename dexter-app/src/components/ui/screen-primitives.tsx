@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { AlertTriangle, RefreshCcw } from "lucide-react";
+import { motion } from "framer-motion";
 
 import { DexterEyes } from "@/components/ui/illustrations";
 
@@ -136,20 +137,20 @@ export function PosterEmptyState({
   hideIcon?: boolean;
 }) {
   return (
-    <PosterPanel accent={accent} soft={soft}>
-      <div className="px-6 py-9 text-center">
-        {!hideIcon ? (
-          <div
-            className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border-4 border-border-strong bg-surface"
-            style={{ boxShadow: `6px 6px 0 ${accent}` }}
-          >
-            <DexterEyes size={36} color={accent} />
-          </div>
+    <div className="relative overflow-hidden py-6 px-6 flex flex-col items-center justify-center text-center">
+      {/* Ambient Pulsing Gradient Blur */}
+      
+      <div className="relative z-10 max-w-sm mt-6 select-text">
+        <h3 className="font-slackey text-2xl tracking-tight text-theme-accent leading-snug">
+          {title}
+        </h3>
+        {body ? (
+          <p className="mt-2.5 text-xs font-semibold leading-relaxed text-ink-muted tracking-wider px-4">
+            {body}
+          </p>
         ) : null}
-        <div className="display-title-sm mt-5 text-foreground">{title}</div>
-        {body ? <p className="mt-3 text-sm leading-6 text-ink-muted">{body}</p> : null}
       </div>
-    </PosterPanel>
+    </div>
   );
 }
 
