@@ -1,35 +1,21 @@
 import { redirect } from "next/navigation";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/session";
 
 /**
- * Root page — only decides where to redirect.
+ * Root page only decides where to redirect.
  *
- * Uses a lightweight auth + single-column DB check instead of the full
- * getCurrentUser() → ensureUserSetup() → ensureChallenges() chain,
- * which was adding ~1.2s of unnecessary work on every cold visit.
+ * It uses the shared session helper so transient auth/network failures
+ * degrade into the existing auth redirect instead of crashing the request.
  */
 export default async function IndexPage() {
-  const supabase = await createSupabaseServerClient();
+  const user = await getCurrentUser();
 
-  // getUser() is cheap here because the middleware already refreshed the
-  // session — the SDK reuses the validated token from cookies.
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser();
-
-  if (!authUser) {
+  if (!user) {
     redirect("/auth");
   }
 
-  // Single-column fetch — no joins, no challenge logic.
-  const { data: profile } = await supabase
-    .from("users")
-    .select("onboarding_complete")
-    .eq("id", authUser.id)
-    .maybeSingle();
-
-  if (!profile || !profile.onboarding_complete) {
+  if (!user.onboardingComplete) {
     redirect("/onboarding");
   }
 

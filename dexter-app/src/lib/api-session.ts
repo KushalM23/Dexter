@@ -10,7 +10,7 @@ export async function getApiUser() {
       return null;
     }
 
-    return ensureUserSetup(data.user);
+    return ensureUserSetup(data.user, { ensureChallenges: false });
   } catch {
     return null;
   }

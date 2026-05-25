@@ -1,4 +1,8 @@
 import {
+  addDays,
+  addWeeks,
+  differenceInCalendarDays,
+  differenceInCalendarWeeks,
   endOfMonth,
   endOfWeek,
   format,
@@ -218,9 +222,100 @@ type ChallengeProgressEntry = {
 };
 
 const currentChallengeIds = new Set(challengeCatalog.map((challenge) => challenge.id));
+const DAILY_ACTIVE_CHALLENGE_COUNT = 5;
+const WEEKLY_ACTIVE_CHALLENGE_COUNT = 5;
+const DAILY_BACKLOG_WINDOW_COUNT = 28;
+const WEEKLY_BACKLOG_WINDOW_COUNT = 4;
+const DAILY_ROTATION_ANCHOR = new Date(2026, 4, 25);
+const WEEKLY_ROTATION_ANCHOR = new Date(2026, 4, 25);
+const SUPABASE_PAGE_SIZE = 1000;
 
 function challengeProgressGroupKey(progress: UserChallengeProgressRecord) {
   return `${progress.challengeId}:${progress.expiresAt ?? "permanent"}`;
+}
+
+function scheduledChallengeKey(
+  challengeId: string,
+  assignedAt: string,
+  expiresAt: string | null,
+) {
+  return `${challengeId}:${assignedAt}:${expiresAt ?? "permanent"}`;
+}
+
+function positiveModulo(value: number, divisor: number) {
+  if (divisor === 0) {
+    return 0;
+  }
+
+  return ((value % divisor) + divisor) % divisor;
+}
+
+function isChallengeActiveNow(progress: UserChallengeProgressRecord, now: Date) {
+  const assignedAt = new Date(progress.assignedAt);
+  if (Number.isNaN(assignedAt.getTime()) || assignedAt > now) {
+    return false;
+  }
+
+  if (!progress.expiresAt) {
+    return true;
+  }
+
+  const expiresAt = new Date(progress.expiresAt);
+  return !Number.isNaN(expiresAt.getTime()) && expiresAt > now;
+}
+
+function selectTimedChallengesForWindow(
+  templates: ChallengeTemplateRecord[],
+  type: "daily" | "weekly",
+  windowStart: Date,
+) {
+  const pool = templates.filter((challenge) => challenge.type === type);
+  const desiredCount =
+    type === "daily" ? DAILY_ACTIVE_CHALLENGE_COUNT : WEEKLY_ACTIVE_CHALLENGE_COUNT;
+
+  if (pool.length <= desiredCount) {
+    return pool;
+  }
+
+  const windowOffset =
+    type === "daily"
+      ? differenceInCalendarDays(startOfDay(windowStart), startOfDay(DAILY_ROTATION_ANCHOR))
+      : differenceInCalendarWeeks(
+          startOfWeek(windowStart, { weekStartsOn: 1 }),
+          startOfWeek(WEEKLY_ROTATION_ANCHOR, { weekStartsOn: 1 }),
+          { weekStartsOn: 1 },
+        );
+  const startIndex = positiveModulo(windowOffset * desiredCount, pool.length);
+
+  return Array.from({ length: desiredCount }, (_, index) => {
+    return pool[(startIndex + index) % pool.length];
+  });
+}
+
+function buildTimedChallengeSchedule(
+  templates: ChallengeTemplateRecord[],
+  type: "daily" | "weekly",
+  now: Date,
+) {
+  const backlogWindowCount =
+    type === "daily" ? DAILY_BACKLOG_WINDOW_COUNT : WEEKLY_BACKLOG_WINDOW_COUNT;
+  const currentWindowStart =
+    type === "daily" ? startOfDay(now) : startOfWeek(now, { weekStartsOn: 1 });
+
+  return Array.from({ length: backlogWindowCount }, (_, offset) => {
+    const windowStart =
+      type === "daily"
+        ? addDays(currentWindowStart, offset)
+        : addWeeks(currentWindowStart, offset);
+    const expiresAt =
+      type === "daily" ? addDays(windowStart, 1) : addWeeks(windowStart, 1);
+
+    return selectTimedChallengesForWindow(templates, type, windowStart).map((challenge) => ({
+      challenge,
+      assignedAt: windowStart.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+    }));
+  }).flat();
 }
 
 function pickPreferredChallengeProgress(
@@ -297,6 +392,35 @@ function dedupeChallengeProgressEntries(entries: ChallengeProgressEntry[]) {
     .filter((entry): entry is ChallengeProgressEntry => Boolean(entry));
 }
 
+function mergeChallengeProgressRecords(records: UserChallengeProgressRecord[]) {
+  if (records.length === 0) {
+    return null;
+  }
+
+  return records.slice(1).reduce((merged, record) => {
+    const preferred = pickPreferredChallengeProgress(merged, record);
+
+    return {
+      ...preferred,
+      progress: Math.max(merged.progress, record.progress),
+      completed: merged.completed || record.completed,
+      completedAt: pickEarlierDateString(merged.completedAt, record.completedAt),
+      assignedAt: pickEarlierRequiredDateString(merged.assignedAt, record.assignedAt),
+      expiresAt: merged.expiresAt ?? record.expiresAt,
+    };
+  }, records[0]);
+}
+
+function chunkArray<T>(items: T[], size: number) {
+  const chunks: T[][] = [];
+
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+
+  return chunks;
+}
+
 function currentLevelFromXp(totalXp: number) {
   return Math.floor(totalXp / 500) + 1;
 }
@@ -363,6 +487,65 @@ async function getUserCollectionsWithCards(supabase: SupabaseClient, userId: str
       card: cardRow ? mapSpeciesCardRow(cardRow) : null,
     };
   });
+}
+
+async function listAllUserChallengeProgressRows(supabase: SupabaseClient, userId: string) {
+  const rows: DbChallengeProgressRow[] = [];
+
+  for (let offset = 0; ; offset += SUPABASE_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("user_challenge_progress")
+      .select("*")
+      .eq("user_id", userId)
+      .order("assigned_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(offset, offset + SUPABASE_PAGE_SIZE - 1);
+
+    if (error) {
+      throw error;
+    }
+
+    const batch = (data ?? []) as DbChallengeProgressRow[];
+    rows.push(...batch);
+
+    if (batch.length < SUPABASE_PAGE_SIZE) {
+      break;
+    }
+  }
+
+  return rows;
+}
+
+async function listAllUserChallengeProgressRowsWithChallenges(
+  supabase: SupabaseClient,
+  userId: string,
+) {
+  const rows: Array<DbChallengeProgressRow & { challenge: DbChallengeRow | null }> = [];
+
+  for (let offset = 0; ; offset += SUPABASE_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("user_challenge_progress")
+      .select("*, challenge:challenges(*)")
+      .eq("user_id", userId)
+      .order("assigned_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(offset, offset + SUPABASE_PAGE_SIZE - 1);
+
+    if (error) {
+      throw error;
+    }
+
+    const batch = (data ?? []) as Array<
+      DbChallengeProgressRow & { challenge: DbChallengeRow | null }
+    >;
+    rows.push(...batch);
+
+    if (batch.length < SUPABASE_PAGE_SIZE) {
+      break;
+    }
+  }
+
+  return rows;
 }
 
 async function getXpWithinWindow(
@@ -1171,42 +1354,10 @@ async function awardXp(
     .eq("id", userId);
 }
 
-function nextUtcMidnight(reference: Date) {
-  const next = new Date(reference);
-  next.setUTCHours(24, 0, 0, 0);
-  return next.toISOString();
-}
-
-function nextUtcMonday(reference: Date) {
-  const weekEnd = endOfWeek(reference, { weekStartsOn: 1 });
-  const next = new Date(weekEnd);
-  next.setUTCHours(24, 0, 0, 0);
-  return next.toISOString();
-}
-
-function isCurrentTimedChallenge(progress: UserChallengeProgressRecord, now: Date) {
-  return Boolean(progress.expiresAt && new Date(progress.expiresAt) > now);
-}
-
-function missingChallengesForWindow(
-  templates: ChallengeTemplateRecord[],
-  progressItems: UserChallengeProgressRecord[],
-  templateById: Map<string, ChallengeTemplateRecord>,
-  type: "daily" | "weekly",
-  now: Date,
+async function ensureChallenges(
+  supabase: SupabaseClient,
+  user: Pick<UserRecord, "id">,
 ) {
-  const currentWindow = progressItems.filter((progress) => {
-    const challenge = templateById.get(progress.challengeId);
-    return challenge?.type === type && isCurrentTimedChallenge(progress, now);
-  });
-  const existingIds = new Set(currentWindow.map((progress) => progress.challengeId));
-
-  return templates.filter(
-    (challenge) => challenge.type === type && !existingIds.has(challenge.id),
-  );
-}
-
-async function ensureChallenges(supabase: SupabaseClient, user: UserRecord) {
   const now = new Date();
   const templateList = await ensureChallengeTemplates(supabase);
   const challenges = templateList.map((row) => mapChallengeRow(row));
@@ -1215,73 +1366,65 @@ async function ensureChallenges(supabase: SupabaseClient, user: UserRecord) {
     return;
   }
 
-  const { data: progressRows, error: progressError } = await supabase
-    .from("user_challenge_progress")
-    .select("*")
-    .eq("user_id", user.id);
-
-  if (progressError) {
-    throw progressError;
-  }
-
-  const progressItems = ((progressRows ?? []) as DbChallengeProgressRow[]).map((row) =>
-    mapChallengeProgressRow(row),
-  );
-  const uniqueProgressItems = dedupeChallengeProgressRecords(progressItems);
   const templateById = new Map<string, ChallengeTemplateRecord>(
     challenges.map((challenge) => [challenge.id, challenge]),
   );
-
+  const progressRows = await listAllUserChallengeProgressRows(supabase, user.id);
+  const desiredTimedSchedule = [
+    ...buildTimedChallengeSchedule(challenges, "daily", now),
+    ...buildTimedChallengeSchedule(challenges, "weekly", now),
+  ];
+  const desiredTimedScheduleByKey = new Map(
+    desiredTimedSchedule.map((scheduledChallenge) => [
+      scheduledChallengeKey(
+        scheduledChallenge.challenge.id,
+        scheduledChallenge.assignedAt,
+        scheduledChallenge.expiresAt,
+      ),
+      scheduledChallenge,
+    ] as const),
+  );
+  const groupedAchievementRows = new Map<string, DbChallengeProgressRow[]>();
+  const groupedTimedRows = new Map<string, DbChallengeProgressRow[]>();
+  const deleteIds = new Set<string>();
+  const updates: Array<{ id: string; data: Partial<DbChallengeProgressRow> }> = [];
   const inserts: Array<Partial<DbChallengeProgressRow>> = [];
 
-  missingChallengesForWindow(
-    challenges,
-    uniqueProgressItems,
-    templateById,
-    "daily",
-    now,
-  ).forEach((challenge) => {
-    inserts.push({
-      user_id: user.id,
-      challenge_id: challenge.id,
-      progress: 0,
-      completed: false,
-      completed_at: null,
-      assigned_at: now.toISOString(),
-      expires_at: nextUtcMidnight(now),
-    });
-  });
+  for (const row of progressRows) {
+    const challenge = templateById.get(row.challenge_id);
+    if (!challenge) {
+      deleteIds.add(row.id);
+      continue;
+    }
 
-  missingChallengesForWindow(
-    challenges,
-    uniqueProgressItems,
-    templateById,
-    "weekly",
-    now,
-  ).forEach((challenge) => {
-    inserts.push({
-      user_id: user.id,
-      challenge_id: challenge.id,
-      progress: 0,
-      completed: false,
-      completed_at: null,
-      assigned_at: now.toISOString(),
-      expires_at: nextUtcMonday(now),
-    });
-  });
+    if (challenge.type === "achievement") {
+      const existing = groupedAchievementRows.get(challenge.id) ?? [];
+      existing.push(row);
+      groupedAchievementRows.set(challenge.id, existing);
+      continue;
+    }
 
-  const achievementIds = new Set(
-    uniqueProgressItems
-      .filter((progress) => templateById.get(progress.challengeId)?.type === "achievement")
-      .map((progress) => progress.challengeId),
-  );
+    if (!row.expires_at) {
+      deleteIds.add(row.id);
+      continue;
+    }
 
-  challenges
-    .filter(
-      (challenge) =>
-        challenge.type === "achievement" && !achievementIds.has(challenge.id),
-    )
-    .forEach((challenge) => {
+    const scheduleKey = scheduledChallengeKey(row.challenge_id, row.assigned_at, row.expires_at);
+    if (!desiredTimedScheduleByKey.has(scheduleKey)) {
+      deleteIds.add(row.id);
+      continue;
+    }
+
+    const existing = groupedTimedRows.get(scheduleKey) ?? [];
+    existing.push(row);
+    groupedTimedRows.set(scheduleKey, existing);
+  }
+
+  for (const challenge of challenges.filter((entry) => entry.type === "achievement")) {
+    const rows = groupedAchievementRows.get(challenge.id) ?? [];
+    const merged = mergeChallengeProgressRecords(rows.map((row) => mapChallengeProgressRow(row)));
+
+    if (!merged) {
       inserts.push({
         user_id: user.id,
         challenge_id: challenge.id,
@@ -1291,11 +1434,99 @@ async function ensureChallenges(supabase: SupabaseClient, user: UserRecord) {
         assigned_at: now.toISOString(),
         expires_at: null,
       });
-    });
+      continue;
+    }
+
+    const [canonicalRow, ...duplicateRows] = rows;
+    duplicateRows.forEach((row) => deleteIds.add(row.id));
+
+    const updateData: Partial<DbChallengeProgressRow> = {
+      progress: merged.progress,
+      completed: merged.completed,
+      completed_at: merged.completedAt,
+      assigned_at: merged.assignedAt,
+      expires_at: null,
+    };
+
+    if (
+      canonicalRow.progress !== updateData.progress ||
+      canonicalRow.completed !== updateData.completed ||
+      canonicalRow.completed_at !== updateData.completed_at ||
+      canonicalRow.assigned_at !== updateData.assigned_at ||
+      canonicalRow.expires_at !== updateData.expires_at
+    ) {
+      updates.push({ id: canonicalRow.id, data: updateData });
+    }
+  }
+
+  for (const scheduledChallenge of desiredTimedSchedule) {
+    const scheduleKey = scheduledChallengeKey(
+      scheduledChallenge.challenge.id,
+      scheduledChallenge.assignedAt,
+      scheduledChallenge.expiresAt,
+    );
+    const rows = groupedTimedRows.get(scheduleKey) ?? [];
+    const merged = mergeChallengeProgressRecords(rows.map((row) => mapChallengeProgressRow(row)));
+
+    if (!merged) {
+      inserts.push({
+        user_id: user.id,
+        challenge_id: scheduledChallenge.challenge.id,
+        progress: 0,
+        completed: false,
+        completed_at: null,
+        assigned_at: scheduledChallenge.assignedAt,
+        expires_at: scheduledChallenge.expiresAt,
+      });
+      continue;
+    }
+
+    const [canonicalRow, ...duplicateRows] = rows;
+    duplicateRows.forEach((row) => deleteIds.add(row.id));
+
+    const updateData: Partial<DbChallengeProgressRow> = {
+      progress: merged.progress,
+      completed: merged.completed,
+      completed_at: merged.completedAt,
+      assigned_at: scheduledChallenge.assignedAt,
+      expires_at: scheduledChallenge.expiresAt,
+    };
+
+    if (
+      canonicalRow.progress !== updateData.progress ||
+      canonicalRow.completed !== updateData.completed ||
+      canonicalRow.completed_at !== updateData.completed_at ||
+      canonicalRow.assigned_at !== updateData.assigned_at ||
+      canonicalRow.expires_at !== updateData.expires_at
+    ) {
+      updates.push({ id: canonicalRow.id, data: updateData });
+    }
+  }
+
+  for (const chunk of chunkArray(Array.from(deleteIds), 200)) {
+    const { error } = await supabase.from("user_challenge_progress").delete().in("id", chunk);
+    if (error) {
+      throw error;
+    }
+  }
+
+  for (const updateChunk of chunkArray(updates, 25)) {
+    await Promise.all(
+      updateChunk.map(async (update) => {
+        const { error } = await supabase
+          .from("user_challenge_progress")
+          .update(update.data)
+          .eq("id", update.id);
+
+        if (error) {
+          throw error;
+        }
+      }),
+    );
+  }
 
   if (inserts.length > 0) {
     const { error } = await supabase.from("user_challenge_progress").insert(inserts);
-
     if (error) {
       throw error;
     }
@@ -1376,14 +1607,7 @@ async function applyChallengeProgress(
   collection: UserCollectionRecord,
   card: SpeciesCardRecord,
 ) {
-  const { data: progressRows, error } = await supabase
-    .from("user_challenge_progress")
-    .select("*, challenge:challenges(*)")
-    .eq("user_id", userId);
-
-  if (error) {
-    throw error;
-  }
+  const progressRows = await listAllUserChallengeProgressRowsWithChallenges(supabase, userId);
 
   const { data: userXpRow, error: userXpError } = await supabase
     .from("users")
@@ -1428,13 +1652,8 @@ async function applyChallengeProgress(
     mapUserCollectionRow(row),
   );
 
-  const now = collection.capturedAt;
-
-  const progressRowList = (progressRows ?? []) as Array<
-    DbChallengeProgressRow & { challenge: DbChallengeRow | null }
-  >;
   const progressEntries = dedupeChallengeProgressEntries(
-    progressRowList
+    progressRows
       .map((row) => {
         const challenge = row.challenge;
         if (!challenge || !currentChallengeIds.has(challenge.id)) {
@@ -1470,13 +1689,14 @@ async function applyChallengeProgress(
   let completedChallenge = false;
   let currentTotalXp = userXpRow.total_xp ?? 0;
   let currentLevel = currentLevelFromXp(currentTotalXp);
+  const capturedAt = new Date(collection.capturedAt);
 
   for (const { progress, challenge } of progressEntries) {
     if (progress.completed) {
       continue;
     }
 
-    if (progress.expiresAt && new Date(progress.expiresAt) < new Date(now)) {
+    if (!isChallengeActiveNow(progress, capturedAt)) {
       continue;
     }
 
@@ -1514,7 +1734,7 @@ async function applyChallengeProgress(
         .update({
           progress: nextProgress,
           completed,
-          completed_at: completed ? now : progress.completedAt,
+          completed_at: completed ? collection.capturedAt : progress.completedAt,
         })
         .eq("id", progress.id);
 
@@ -1526,7 +1746,7 @@ async function applyChallengeProgress(
           challenge.xpReward,
           challenge.type === "achievement" ? "achievement" : "challenge",
           challenge.title,
-          now,
+          collection.capturedAt,
         );
         currentTotalXp += challenge.xpReward;
         currentLevel = currentLevelFromXp(currentTotalXp);
@@ -1551,13 +1771,19 @@ function cloneCardForCollection(card: SpeciesCardRecord, collection: UserCollect
   };
 }
 
-export async function ensureUserSetup(authUser: SupabaseUser) {
+export async function ensureUserSetup(
+  authUser: SupabaseUser,
+  options?: { ensureChallenges?: boolean },
+) {
   const supabase = createSupabaseAdminClient();
+  const shouldEnsureChallenges = options?.ensureChallenges ?? true;
   const existing = await getUserRowById(supabase, authUser.id);
 
   if (existing) {
     const user = mapUserRow(existing);
-    await ensureChallenges(supabase, user);
+    if (shouldEnsureChallenges) {
+      await ensureChallenges(supabase, user);
+    }
     return user;
   }
 
@@ -1595,14 +1821,18 @@ export async function ensureUserSetup(authUser: SupabaseUser) {
     const retryRow = await getUserRowById(supabase, authUser.id);
     if (retryRow) {
       const user = mapUserRow(retryRow);
-      await ensureChallenges(supabase, user);
+      if (shouldEnsureChallenges) {
+        await ensureChallenges(supabase, user);
+      }
       return user;
     }
     throw error;
   }
 
   const user = mapUserRow(inserted as DbUserRow);
-  await ensureChallenges(supabase, user);
+  if (shouldEnsureChallenges) {
+    await ensureChallenges(supabase, user);
+  }
   return user;
 }
 
@@ -1678,31 +1908,20 @@ export async function getHomeData(userId: string) {
   }
 
   const user = mapUserRow(userRow);
+  await ensureChallenges(supabase, user);
   const collections = await getUserCollectionsWithCards(supabase, userId);
   const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const tomorrow = new Date(now);
   tomorrow.setHours(24, 0, 0, 0);
 
-  const { data: progressRows, error: progressError } = await supabase
-    .from("user_challenge_progress")
-    .select("*, challenge:challenges(*)")
-    .eq("user_id", userId)
-    .eq("completed", false);
+  const progressRows = await listAllUserChallengeProgressRowsWithChallenges(supabase, userId);
 
-  if (progressError) {
-    throw progressError;
-  }
-
-  const progressRowList = (progressRows ?? []) as Array<
-    DbChallengeProgressRow & { challenge: DbChallengeRow | null }
-  >;
-
-  const activeChallenges = dedupeChallengeProgressEntries(
-    progressRowList
+  const progressItems = dedupeChallengeProgressEntries(
+    progressRows
       .map((row) => {
         const challenge = row.challenge;
-        if (!challenge || !currentChallengeIds.has(challenge.id)) {
+        if (!challenge || !currentChallengeIds.has(challenge.id) || row.completed) {
           return null;
         }
 
@@ -1712,20 +1931,28 @@ export async function getHomeData(userId: string) {
         };
       })
       .filter((entry): entry is ChallengeProgressEntry => Boolean(entry)),
-  )
-    .filter((entry) => !entry.progress.expiresAt || new Date(entry.progress.expiresAt) > now)
+  ).filter((entry) => isChallengeActiveNow(entry.progress, now));
+
+  const activeDailies = progressItems
+    .filter((entry) => entry.challenge.type === "daily")
     .sort((left, right) => {
-      if (!left.progress.expiresAt) {
-        return 1;
-      }
-      if (!right.progress.expiresAt) {
-        return -1;
-      }
-      return (
-        new Date(left.progress.expiresAt).getTime() -
-        new Date(right.progress.expiresAt).getTime()
-      );
+      if (!left.progress.expiresAt) return 1;
+      if (!right.progress.expiresAt) return -1;
+      return new Date(left.progress.expiresAt).getTime() - new Date(right.progress.expiresAt).getTime();
     });
+
+  const activeWeeklies = progressItems
+    .filter((entry) => entry.challenge.type === "weekly")
+    .sort((left, right) => {
+      if (!left.progress.expiresAt) return 1;
+      if (!right.progress.expiresAt) return -1;
+      return new Date(left.progress.expiresAt).getTime() - new Date(right.progress.expiresAt).getTime();
+    });
+
+  const selectedChallenges = [
+    ...activeDailies.slice(0, 3),
+    ...activeWeeklies.slice(0, Math.max(0, 3 - activeDailies.length)),
+  ].slice(0, 3);
 
   return {
     user,
@@ -1748,19 +1975,11 @@ export async function getHomeData(userId: string) {
         collection: entry.collection,
         card: cloneCardForCollection(entry.card as SpeciesCardRecord, entry.collection),
       })),
-    activeChallenge: activeChallenges[0]
-      ? {
-          id: activeChallenges[0].challenge.id,
-          title: activeChallenges[0].challenge.title,
-          description: activeChallenges[0].challenge.description,
-          xpReward: activeChallenges[0].challenge.xpReward,
-          progress: activeChallenges[0].progress.progress,
-          targetCount: activeChallenges[0].challenge.targetCount,
-          expiresLabel: activeChallenges[0].progress.expiresAt
-            ? formatDistanceToNowStrict(new Date(activeChallenges[0].progress.expiresAt))
-            : "Permanent",
-        }
-      : null,
+    activeChallenges: selectedChallenges.map((item) => ({
+      id: item.challenge.id,
+      title: item.challenge.title,
+      xpReward: item.challenge.xpReward,
+    })),
   };
 }
 
@@ -1778,22 +1997,12 @@ export async function getCollectionData(userId: string) {
 
 export async function getChallengesData(userId: string) {
   const supabase = createSupabaseAdminClient();
+  await ensureChallenges(supabase, { id: userId });
   const now = new Date();
-  const { data, error } = await supabase
-    .from("user_challenge_progress")
-    .select("*, challenge:challenges(*)")
-    .eq("user_id", userId);
-
-  if (error) {
-    throw error;
-  }
-
-  const progressRowList = (data ?? []) as Array<
-    DbChallengeProgressRow & { challenge: DbChallengeRow | null }
-  >;
+  const progressRows = await listAllUserChallengeProgressRowsWithChallenges(supabase, userId);
 
   const progressItems = dedupeChallengeProgressEntries(
-    progressRowList
+    progressRows
       .map((row) => {
         const challenge = row.challenge;
         if (!challenge || !currentChallengeIds.has(challenge.id)) {
@@ -1825,17 +2034,13 @@ export async function getChallengesData(userId: string) {
     daily: progressItems
       .filter(
         (entry) =>
-          entry.challenge.type === "daily" &&
-          entry.progress.expiresAt &&
-          new Date(entry.progress.expiresAt) > now,
+          entry.challenge.type === "daily" && isChallengeActiveNow(entry.progress, now),
       )
       .sort(sortChallenges),
     weekly: progressItems
       .filter(
         (entry) =>
-          entry.challenge.type === "weekly" &&
-          entry.progress.expiresAt &&
-          new Date(entry.progress.expiresAt) > now,
+          entry.challenge.type === "weekly" && isChallengeActiveNow(entry.progress, now),
       )
       .sort(sortChallenges),
     achievements: progressItems

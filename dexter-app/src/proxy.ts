@@ -43,7 +43,11 @@ export async function proxy(request: NextRequest) {
   // Refresh the session. This call reads the auth cookies, validates them,
   // and — if the access token is expired — uses the refresh token to get a
   // new pair. The refreshed tokens are written back via setAll above.
-  await supabase.auth.getUser();
+  try {
+    await supabase.auth.getUser();
+  } catch (error) {
+    console.error("[proxy] Supabase session refresh failed:", error);
+  }
 
   return response;
 }

@@ -6,7 +6,6 @@ import { SpeciesCard } from "@/components/cards/species-card";
 import { DexterEyes } from "@/components/ui/illustrations";
 import {
   PosterEmptyState,
-  ProgressRail,
   SectionDivider,
 } from "@/components/ui/screen-primitives";
 import { HOME_THEME } from "@/features/home/constants";
@@ -70,45 +69,38 @@ export function HomeIdleState({
         />
       </div>
 
-      {data.activeChallenge ? (
+      {data.activeChallenges && data.activeChallenges.length > 0 ? (
         <motion.div 
           className="relative overflow-hidden rounded-3xl bg-theme-accent px-5 py-6 text-theme-contrast shadow-md border border-black/5"
         >
           {/* Subtle Texture Overlay */}
           <div className="absolute inset-0 pointer-events-none texture-overlay" aria-hidden="true" />
           
-          <div className="relative z-10 flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-black uppercase tracking-[0.18em] text-white/70 drop-shadow-sm">
-                Active challenge
-              </div>
-              <div className="display-section mt-3 leading-tight tracking-tight drop-shadow-md">
-                {data.activeChallenge.title}
-              </div>
-              <p className="mt-2 text-sm leading-5 text-white/90 drop-shadow-sm font-medium">
-                {data.activeChallenge.description}
-              </p>
+          <div className="relative z-10">
+            <div className="text-xs font-black uppercase tracking-[0.18em] text-white/70 drop-shadow-sm mb-4">
+              Active challenges
             </div>
-            <div
-              className="eyebrow-badge bg-surface text-xs shadow-sm"
-              style={{ color: HOME_THEME.accent }}
-            >
-              {data.activeChallenge.xpReward} XP
+            
+            <div className="flex flex-col gap-3">
+              {data.activeChallenges.map((challenge, index) => (
+                <div 
+                  key={challenge.id}
+                  className={`flex items-center justify-between gap-4 py-2 ${
+                    index < data.activeChallenges.length - 1 ? "border-b border-white/10" : ""
+                  }`}
+                >
+                  <div className="font-display text-[15px] tracking-wider text-white leading-snug truncate">
+                    {challenge.title}
+                  </div>
+                  <div 
+                    className="eyebrow-badge !font-bold bg-surface text-xs shadow-sm py-1 px-2.5 rounded-lg shrink-0"
+                    style={{ color: HOME_THEME.accent }}
+                  >
+                    {challenge.xpReward} XP
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-          <div className="relative z-10 mt-5">
-            <ProgressRail
-              value={data.activeChallenge.progress}
-              total={data.activeChallenge.targetCount}
-              accent="#FFFFFF"
-              soft="rgba(255,255,255,0.2)"
-            />
-          </div>
-          <div className="relative z-10 mt-3 flex items-center justify-between text-xs font-black uppercase tracking-[0.16em] text-white/70 drop-shadow-sm">
-            <span>
-              {data.activeChallenge.progress}/{data.activeChallenge.targetCount}
-            </span>
-            <span>{data.activeChallenge.expiresLabel}</span>
           </div>
         </motion.div>
       ) : (

@@ -39,15 +39,11 @@ export type HomeData = {
       occurrenceCount: number;
     };
   }>;
-  activeChallenge: {
+  activeChallenges: Array<{
     id: string;
     title: string;
-    description: string;
     xpReward: number;
-    progress: number;
-    targetCount: number;
-    expiresLabel: string;
-  } | null;
+  }>;
 };
 
 export type HomeScreenMode =
