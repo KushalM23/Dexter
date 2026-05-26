@@ -654,7 +654,7 @@ function rarityIndex(rarity: Rarity) {
 
 // ---------------------------------------------------------------------------
 // Domesticated / ubiquitous species override (always "common")
-// GBIF observation counts are meaningless for these — nobody uploads research
+// GBIF observation counts are meaningless for these â€” nobody uploads research
 // observations of their pet dog or themselves to a biodiversity database.
 // ---------------------------------------------------------------------------
 const ALWAYS_COMMON_SPECIES = new Set([
@@ -707,7 +707,7 @@ export function getRarityFromOccurrence(
 }
 
 // ---------------------------------------------------------------------------
-// GBIF API — Taxonomy validation & enrichment (PRD §7.4)
+// GBIF API â€” Taxonomy validation & enrichment (PRD Â§7.4)
 // ---------------------------------------------------------------------------
 
 interface GbifMatchResult {
@@ -728,23 +728,23 @@ async function matchSpeciesWithGbif(
   scientificName: string,
 ): Promise<GbifMatchResult | null> {
   try {
-    console.log(`[GBIF] 🔍 Matching species: "${scientificName}"`);
+    console.log(`[GBIF] ðŸ” Matching species: "${scientificName}"`);
     const url = `https://api.gbif.org/v1/species/match?name=${encodeURIComponent(scientificName)}&verbose=true`;
     const response = await fetch(url);
 
     if (!response.ok) {
-      console.error(`[GBIF] ❌ Match request failed: ${response.status}`);
+      console.error(`[GBIF] âŒ Match request failed: ${response.status}`);
       return null;
     }
 
     const data = (await response.json()) as Record<string, unknown>;
 
     if (data.matchType === "NONE" || !data.usageKey) {
-      console.warn(`[GBIF] ⚠️ No match found (matchType: ${data.matchType})`);
+      console.warn(`[GBIF] âš ï¸ No match found (matchType: ${data.matchType})`);
       return null;
     }
 
-    console.log(`[GBIF] ✅ Match found: ${data.canonicalName} (key: ${data.usageKey}, type: ${data.matchType})`);
+    console.log(`[GBIF] âœ… Match found: ${data.canonicalName} (key: ${data.usageKey}, type: ${data.matchType})`);
     console.log(`[GBIF]    Taxonomy: ${data.kingdom} > ${data.phylum} > ${data.class} > ${data.order} > ${data.family}`);
 
     return {
@@ -761,13 +761,13 @@ async function matchSpeciesWithGbif(
       matchType: data.matchType as GbifMatchResult["matchType"],
     };
   } catch (error) {
-    console.error("[GBIF] ❌ Match error:", error);
+    console.error("[GBIF] âŒ Match error:", error);
     return null;
   }
 }
 
 // ---------------------------------------------------------------------------
-// GBIF — Regional occurrence count for rarity (PRD §7.7)
+// GBIF â€” Regional occurrence count for rarity (PRD Â§7.7)
 // ---------------------------------------------------------------------------
 
 async function fetchGbifRegionalOccurrence(
@@ -775,27 +775,27 @@ async function fetchGbifRegionalOccurrence(
   countryCode: string,
 ): Promise<number> {
   try {
-    console.log(`[GBIF] 📊 Fetching occurrence count for taxon ${taxonKey} in ${countryCode}...`);
+    console.log(`[GBIF] ðŸ“Š Fetching occurrence count for taxon ${taxonKey} in ${countryCode}...`);
     const url = `https://api.gbif.org/v1/occurrence/count?taxonKey=${taxonKey}&country=${countryCode}`;
     const response = await fetch(url);
 
     if (!response.ok) {
-      console.error(`[GBIF] ❌ Occurrence count failed: ${response.status}`);
+      console.error(`[GBIF] âŒ Occurrence count failed: ${response.status}`);
       return 0;
     }
 
     const count = await response.json();
     const result = typeof count === "number" ? count : 0;
-    console.log(`[GBIF] 📊 Regional occurrence: ${result.toLocaleString()} observations`);
+    console.log(`[GBIF] ðŸ“Š Regional occurrence: ${result.toLocaleString()} observations`);
     return result;
   } catch (error) {
-    console.error("[GBIF] ❌ Occurrence count error:", error);
+    console.error("[GBIF] âŒ Occurrence count error:", error);
     return 0;
   }
 }
 
 // ---------------------------------------------------------------------------
-// Photo Fallback Chain (PRD §7.6):
+// Photo Fallback Chain (PRD Â§7.6):
 // 1. iNaturalist  2. GBIF Media  3. Wikipedia  4. Silhouette
 // ---------------------------------------------------------------------------
 
@@ -863,12 +863,12 @@ async function fetchWikipediaSummary(
 }
 
 async function fetchSpeciesPhoto(scientificName: string): Promise<PhotoResult> {
-  console.log(`[Photo] 📷 Searching photo for "${scientificName}"...`);
+  console.log(`[Photo] ðŸ“· Searching photo for "${scientificName}"...`);
 
   // 1. iNaturalist
   const inatUrl = await fetchInatPhoto(scientificName);
   if (inatUrl) {
-    console.log(`[Photo] ✅ Found on iNaturalist: ${inatUrl.slice(0, 80)}...`);
+    console.log(`[Photo] âœ… Found on iNaturalist: ${inatUrl.slice(0, 80)}...`);
     return { photoUrl: inatUrl, photoSource: "inaturalist" };
   }
   console.log(`[Photo]    iNaturalist: not found, trying GBIF...`);
@@ -876,7 +876,7 @@ async function fetchSpeciesPhoto(scientificName: string): Promise<PhotoResult> {
   // 2. GBIF Media
   const gbifUrl = await fetchGbifPhoto(scientificName);
   if (gbifUrl) {
-    console.log(`[Photo] ✅ Found on GBIF: ${gbifUrl.slice(0, 80)}...`);
+    console.log(`[Photo] âœ… Found on GBIF: ${gbifUrl.slice(0, 80)}...`);
     return { photoUrl: gbifUrl, photoSource: "gbif" };
   }
   console.log(`[Photo]    GBIF Media: not found, trying Wikipedia...`);
@@ -884,17 +884,17 @@ async function fetchSpeciesPhoto(scientificName: string): Promise<PhotoResult> {
   // 3. Wikipedia thumbnail
   const wiki = await fetchWikipediaSummary(scientificName);
   if (wiki?.thumbnail?.source) {
-    console.log(`[Photo] ✅ Found on Wikipedia: ${wiki.thumbnail.source.slice(0, 80)}...`);
+    console.log(`[Photo] âœ… Found on Wikipedia: ${wiki.thumbnail.source.slice(0, 80)}...`);
     return { photoUrl: wiki.thumbnail.source, photoSource: "wikipedia" };
   }
 
   // 4. Fallback silhouette
-  console.log(`[Photo] ⚠️ No photo found, using silhouette fallback`);
+  console.log(`[Photo] âš ï¸ No photo found, using silhouette fallback`);
   return { photoUrl: "", photoSource: "silhouette" };
 }
 
 // ---------------------------------------------------------------------------
-// Wikipedia — Lore / description text (PRD §7.6 step 3)
+// Wikipedia â€” Lore / description text (PRD Â§7.6 step 3)
 // ---------------------------------------------------------------------------
 
 async function fetchWikipediaLore(scientificName: string): Promise<string> {
@@ -908,7 +908,7 @@ async function fetchWikipediaLore(scientificName: string): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// Dynamic species resolution — full pipeline per PRD §7.4–7.6
+// Dynamic species resolution â€” full pipeline per PRD Â§7.4â€“7.6
 // ---------------------------------------------------------------------------
 
 interface ResolvedSpecies {
@@ -937,19 +937,19 @@ async function maybeGeneratePixelArt(
   }
 
   try {
-    console.log(`[PixelArt] 🎨 Generating pixel art for "${commonName}"...`);
+    console.log(`[PixelArt] ðŸŽ¨ Generating pixel art for "${commonName}"...`);
     const imageUrl = await generatePixelArtImage({ commonName, scientificName });
 
     if (imageUrl) {
-      console.log(`[PixelArt] ✅ Generated pixel art: ${imageUrl.slice(0, 80)}...`);
+      console.log(`[PixelArt] âœ… Generated pixel art: ${imageUrl.slice(0, 80)}...`);
     } else {
-      console.log("[PixelArt] ⚠️ Provider returned no image URL");
+      console.log("[PixelArt] âš ï¸ Provider returned no image URL");
     }
 
     return imageUrl;
   } catch (error) {
     console.error(
-      "[PixelArt] ❌ Generation failed:",
+      "[PixelArt] âŒ Generation failed:",
       error instanceof Error ? error.message : error,
     );
     return "";
@@ -1026,7 +1026,7 @@ async function resolveSpeciesFromAPIs(
 }
 
 // ---------------------------------------------------------------------------
-// Upsert species card — creates or reuses global species_cards entry (PRD §7.9)
+// Upsert species card â€” creates or reuses global species_cards entry (PRD Â§7.9)
 // ---------------------------------------------------------------------------
 
 async function ensureSpeciesCard(
@@ -1060,7 +1060,7 @@ async function ensureSpeciesCard(
           .eq("id", existingRow.id);
 
         if (updateError) {
-          console.error("[PixelArt] ❌ Failed to save generated art:", updateError);
+          console.error("[PixelArt] âŒ Failed to save generated art:", updateError);
         } else {
           existingRow.pixel_art_url = pixelArtUrl;
         }
@@ -1204,8 +1204,8 @@ async function findSpeciesByName(
 
 async function identifyWithGemini(imageData: string) {
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`[Gemini] 🚀 Starting species identification...`);
-  console.log(`[Gemini]    Image size: ${Math.round(imageData.length / 1024)}KB`);
+  console.log(`[Gemini] ðŸš€ Starting species identification...`);
+  console.log(`[Gemini]    Raw image size: ${Math.round(imageData.length / 1024)}KB`);
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -1218,118 +1218,139 @@ async function identifyWithGemini(imageData: string) {
     throw new Error("Invalid image data.");
   }
 
-  console.log(`[Gemini] 📡 Sending request to Gemini 2.5 Flash...`);
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                inline_data: {
-                  mime_type: "image/jpeg",
-                  data: rawBase64,
-                },
-              },
-              {
-                // TODO: Re-add screen detection line before production!
-                text: `You are a wildlife species identification expert and fraud detection system.
-
-Analyze this image carefully. Determine if a real animal is visible.
-
-Only real animals count as valid captures for this app.
-Humans count as animals and should be identified as Homo sapiens when present.
-
-REJECT the image if:
-- It is a drawing, illustration, painting, or cartoon
-- It is a stuffed animal, toy, or statue
-- No animal is visible
-- The subject is a plant, fungus, or any other non-animal organism
-
-If a real animal is visible, identify the species.
-
-Respond ONLY in JSON. If invalid, return {"valid_capture": false, "reason": "illustration" | "non_animal" | "no_organism" | "toy_or_statue"}.
-
-If valid, return {"valid_capture": true, "common_name": "...", "scientific_name": "...", "confidence": "high" | "medium" | "low", "kingdom": "...", "class": "..."}.
-`,
-              },
-            ],
-          },
-        ],
-      }),
-    },
-  );
-
-  if (!response.ok) {
-    const errorBody = await response.text().catch(() => "");
-    console.error(
-      `[Gemini] Request failed: ${response.status} ${response.statusText}`,
-      errorBody.slice(0, 500),
-    );
-
-    // Retry once on transient failures (rate limit or server error).
-    if (response.status === 429 || response.status >= 500) {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      const retry = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { inline_data: { mime_type: "image/jpeg", data: rawBase64 } },
-                  {
-                    // TODO: Re-add screen detection line before production!
-                    text: `You are a wildlife species identification expert and fraud detection system.
-
-Analyze this image carefully. Determine if a real animal is visible.
-
-Only real animals count as valid captures for this app.
-Humans count as animals and should be identified as Homo sapiens when present.
-
-REJECT the image if:
-- It is a drawing, illustration, painting, or cartoon
-- It is a stuffed animal, toy, or statue
-- No animal is visible
-- The subject is a plant, fungus, or any other non-animal organism
-
-If a real animal is visible, identify the species.
-
-Respond ONLY in JSON. If invalid, return {"valid_capture": false, "reason": "illustration" | "non_animal" | "no_organism" | "toy_or_statue"}.
-
-If valid, return {"valid_capture": true, "common_name": "...", "scientific_name": "...", "confidence": "high" | "medium" | "low", "kingdom": "...", "class": "..."}.
-`,
-                  },
-                ],
-              },
-            ],
-          }),
-        },
-      );
-
-      if (!retry.ok) {
-        throw new Error(
-          `Gemini request failed after retry (${retry.status}).`,
-        );
-      }
-
-      return handleGeminiResponse(retry);
-    }
-
-    throw new Error(
-      `Gemini request failed (${response.status}): ${errorBody.slice(0, 200)}`,
-    );
+  // --- Compress image with sharp before sending ---
+  let compressedBase64: string;
+  try {
+    const { compressImage } = await import("@/lib/image-compress");
+    const imageBuffer = Buffer.from(rawBase64, "base64");
+    compressedBase64 = await compressImage(imageBuffer);
+    console.log(`[Gemini] ðŸ—œï¸  Compressed image: ${Math.round(rawBase64.length / 1024)}KB â†’ ${Math.round(compressedBase64.length / 1024)}KB`);
+  } catch (compressionError) {
+    console.warn(`[Gemini] âš ï¸ Image compression failed, using original image:`, compressionError);
+    compressedBase64 = rawBase64;
   }
 
-  return handleGeminiResponse(response);
+  const identificationPrompt = `You are a wildlife species identification expert and fraud detection system.
+
+Analyze this image carefully. Determine if a real animal is visible.
+
+Only real animals count as valid captures for this app.
+Humans count as animals and should be identified as Homo sapiens when present.
+
+REJECT the image if:
+- It is a drawing, illustration, painting, or cartoon
+- It is a stuffed animal, toy, or statue
+- No animal is visible
+- The subject is a plant, fungus, or any other non-animal organism
+
+If a real animal is visible, identify the species.
+
+Respond ONLY in JSON. If invalid, return {"valid_capture": false, "reason": "illustration" | "non_animal" | "no_organism" | "toy_or_statue"}.
+
+If valid, return {"valid_capture": true, "common_name": "...", "scientific_name": "...", "confidence": "high" | "medium" | "low", "kingdom": "...", "class": "..."}.
+`;
+
+  // --- Model fallback chain for rate-limit resilience ---
+  return callGeminiWithFallback(apiKey, compressedBase64, identificationPrompt);
+}
+
+/**
+ * Ordered fallback chain: try each model in sequence when the current one
+ * returns HTTP 429 or a "quota exceeded" error.
+ */
+const GEMINI_FALLBACK_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
+  "gemini-1.5-flash-8b",
+] as const;
+
+async function callGeminiWithFallback(
+  apiKey: string,
+  base64Image: string,
+  prompt: string,
+): Promise<GeminiResult> {
+  for (let i = 0; i < GEMINI_FALLBACK_MODELS.length; i++) {
+    const model = GEMINI_FALLBACK_MODELS[i];
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    console.log(`[Gemini] ðŸ“¡ Attempt ${i + 1}/${GEMINI_FALLBACK_MODELS.length} â€” using model: ${model}`);
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  inline_data: {
+                    mime_type: "image/jpeg",
+                    data: base64Image,
+                  },
+                },
+                { text: prompt },
+              ],
+            },
+          ],
+        }),
+      });
+
+      if (response.ok) {
+        console.log(`[Gemini] âœ… Model "${model}" responded successfully.`);
+        return handleGeminiResponse(response);
+      }
+
+      // --- Check for rate-limit / quota errors ---
+      const errorBody = await response.text().catch(() => "");
+      const isRateLimit =
+        response.status === 429 ||
+        errorBody.toLowerCase().includes("quota") ||
+        errorBody.toLowerCase().includes("rate limit") ||
+        errorBody.toLowerCase().includes("resource_exhausted");
+
+      if (isRateLimit) {
+        console.warn(
+          `[Gemini] âš ï¸ Rate limited on "${model}" (HTTP ${response.status}). ${
+            i < GEMINI_FALLBACK_MODELS.length - 1
+              ? `Falling back to "${GEMINI_FALLBACK_MODELS[i + 1]}"...`
+              : "No more fallback models."
+          }`,
+        );
+        console.warn(`[Gemini]    Error body: ${errorBody.slice(0, 300)}`);
+
+        // Brief delay before trying the next model
+        if (i < GEMINI_FALLBACK_MODELS.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+        continue;
+      }
+
+      // Non-rate-limit error â€” fail immediately
+      console.error(
+        `[Gemini] âŒ Model "${model}" failed with HTTP ${response.status}: ${errorBody.slice(0, 300)}`,
+      );
+      throw new Error(
+        `Gemini request failed (${response.status}): ${errorBody.slice(0, 200)}`,
+      );
+    } catch (error: unknown) {
+      // Re-throw structured errors, catch network errors
+      if (error instanceof Error && error.message.startsWith("Gemini")) {
+        throw error;
+      }
+      console.error(`[Gemini] âŒ Network error on "${model}":`, error);
+      throw error;
+    }
+  }
+
+  // All models exhausted
+  console.error(
+    `[Gemini] ðŸš¨ All ${GEMINI_FALLBACK_MODELS.length} models exhausted. Models tried: ${GEMINI_FALLBACK_MODELS.join(", ")}`,
+  );
+  throw new Error(
+    "Service temporarily unavailable. Please try again shortly.",
+  );
 }
 
 type GeminiResult =
@@ -1355,24 +1376,24 @@ async function handleGeminiResponse(response: Response): Promise<GeminiResult> {
   let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
   if (!text) {
-    console.error(`[Gemini] ❌ Empty response from Gemini`);
+    console.error(`[Gemini] âŒ Empty response from Gemini`);
     throw new Error("Gemini returned an empty response.");
   }
 
   // Strip markdown fencing that Gemini sometimes adds.
   text = text.replace(/^```json\s*/i, "").replace(/\s*```$/i, "").trim();
-  console.log(`[Gemini] 📝 Raw response: ${text}`);
+  console.log(`[Gemini] ðŸ“ Raw response: ${text}`);
 
   try {
     const result = JSON.parse(text) as GeminiResult;
     if (result.valid_capture) {
-      console.log(`[Gemini] ✅ Valid capture: "${result.common_name}" (${result.scientific_name}), confidence: ${result.confidence}`);
+      console.log(`[Gemini] âœ… Valid capture: "${result.common_name}" (${result.scientific_name}), confidence: ${result.confidence}`);
     } else {
-      console.log(`[Gemini] ❌ Invalid capture: reason = ${result.reason}`);
+      console.log(`[Gemini] âŒ Invalid capture: reason = ${result.reason}`);
     }
     return result;
   } catch {
-    console.error("[Gemini] ❌ Invalid JSON:", text.slice(0, 300));
+    console.error("[Gemini] âŒ Invalid JSON:", text.slice(0, 300));
     throw new Error("Gemini returned invalid JSON.");
   }
 }
@@ -2288,14 +2309,14 @@ export async function processCapture(
 ): Promise<CaptureResult> {
   try {
     console.log(`\n${'='.repeat(60)}`);
-    console.log(`[Capture] 🎯 Starting capture pipeline for user: ${userId}`);
+    console.log(`[Capture] ðŸŽ¯ Starting capture pipeline for user: ${userId}`);
     console.log(`[Capture]    Location: lat=${payload.lat}, lng=${payload.lng}`);
 
     const analysis = await identifyWithGemini(payload.imageData);
 
     // TODO: Re-enable screen detection in the Gemini prompt before production!
     if (!analysis.valid_capture) {
-      console.log(`[Capture] ❌ Invalid capture — reason: ${analysis.reason}`);
+      console.log(`[Capture] âŒ Invalid capture â€” reason: ${analysis.reason}`);
       return {
         kind: "invalid",
         reason: analysis.reason,
@@ -2304,7 +2325,7 @@ export async function processCapture(
     }
 
     if (!isCatchableKingdom(analysis.kingdom)) {
-      console.log(`[Capture] ❌ Non-animal subject rejected: ${analysis.kingdom}`);
+      console.log(`[Capture] âŒ Non-animal subject rejected: ${analysis.kingdom}`);
       return {
         kind: "invalid",
         reason: "non_animal",
@@ -2313,7 +2334,7 @@ export async function processCapture(
     }
 
     if (analysis.confidence === "low") {
-      console.log(`[Capture] ⚠️ Low confidence — aborting`);
+      console.log(`[Capture] âš ï¸ Low confidence â€” aborting`);
       return {
         kind: "low_confidence",
         message: "Couldn't identify this one. Try getting closer or better lighting.",
@@ -2322,10 +2343,10 @@ export async function processCapture(
 
     const supabase = createSupabaseAdminClient();
     const location = inferLocation(payload.lat, payload.lng);
-    console.log(`[Capture] 📍 Inferred location: ${location.label} (${location.countryCode}, ${location.environmentType})`);
+    console.log(`[Capture] ðŸ“ Inferred location: ${location.label} (${location.countryCode}, ${location.environmentType})`);
 
     // Step 1: Check if species already exists in our DB
-    console.log(`[Capture] 🔍 Step 1: Checking DB for "${analysis.common_name}" / "${analysis.scientific_name}"...`);
+    console.log(`[Capture] ðŸ” Step 1: Checking DB for "${analysis.common_name}" / "${analysis.scientific_name}"...`);
     let species = await findSpeciesByName(
       supabase,
       analysis.common_name,
@@ -2334,7 +2355,7 @@ export async function processCapture(
 
     // Step 2: If not in DB, resolve dynamically via APIs
     if (!species) {
-      console.log(`[Capture] 🌐 Step 2: Not in DB — resolving via GBIF + iNaturalist + Wikipedia...`);
+      console.log(`[Capture] ðŸŒ Step 2: Not in DB â€” resolving via GBIF + iNaturalist + Wikipedia...`);
 
       const resolved = await resolveSpeciesFromAPIs(
         analysis.common_name,
@@ -2343,19 +2364,19 @@ export async function processCapture(
       );
 
       if (!resolved) {
-        console.log(`[Capture] ❌ API resolution failed — no GBIF match`);
+        console.log(`[Capture] âŒ API resolution failed â€” no GBIF match`);
         return {
           kind: "low_confidence",
           message: "Couldn't verify this species. Try getting closer or better lighting.",
         };
       }
 
-      console.log(`[Capture] ✅ Resolved: ${resolved.commonName} (${resolved.scientificName})`);
+      console.log(`[Capture] âœ… Resolved: ${resolved.commonName} (${resolved.scientificName})`);
       console.log(`[Capture]    Photo: ${resolved.photoSource} | Lore: ${resolved.lore ? resolved.lore.slice(0, 60) + '...' : '(none)'}`);
       console.log(`[Capture]    Occurrence: ${resolved.occurrenceCount.toLocaleString()}`);
 
       if (!isCatchableKingdom(resolved.kingdom)) {
-        console.log(`[Capture] ❌ Non-animal species rejected after GBIF resolution: ${resolved.kingdom}`);
+        console.log(`[Capture] âŒ Non-animal species rejected after GBIF resolution: ${resolved.kingdom}`);
         return {
           kind: "invalid",
           reason: "non_animal",
@@ -2364,18 +2385,18 @@ export async function processCapture(
       }
 
       // Step 3: Create the species card
-      console.log(`[Capture] 💾 Step 3: Upserting species card...`);
+      console.log(`[Capture] ðŸ’¾ Step 3: Upserting species card...`);
       species = await ensureSpeciesCard(supabase, resolved);
-      console.log(`[Capture] ✅ Species card ready: id=${species.id}`);
+      console.log(`[Capture] âœ… Species card ready: id=${species.id}`);
     } else {
-      console.log(`[Capture] ✅ Found in DB: id=${species.id}, "${species.commonName}"`);
+      console.log(`[Capture] âœ… Found in DB: id=${species.id}, "${species.commonName}"`);
     }
 
     const capturedImageUrl = await saveCaptureImage(userId, payload.imageData);
-    console.log(`[Capture] 📸 Image saved: ${capturedImageUrl}`);
+    console.log(`[Capture] ðŸ“¸ Image saved: ${capturedImageUrl}`);
 
     // Step 4: Duplicate check
-    console.log(`[Capture] 🔍 Step 4: Checking for duplicate (taxon key: ${species.gbifTaxonKey})...`);
+    console.log(`[Capture] ðŸ” Step 4: Checking for duplicate (taxon key: ${species.gbifTaxonKey})...`);
     const { data: duplicateRow, error: duplicateError } = await supabase
       .from("user_collections")
       .select("*")
@@ -2388,7 +2409,7 @@ export async function processCapture(
     }
 
     if (duplicateRow) {
-      console.log(`[Capture] ⚠️ Duplicate! Already in user's collection`);
+      console.log(`[Capture] âš ï¸ Duplicate! Already in user's collection`);
       const duplicate = mapUserCollectionRow(duplicateRow as DbUserCollectionRow);
       return {
         kind: "duplicate",
@@ -2399,7 +2420,7 @@ export async function processCapture(
     }
 
     // Step 5: Get live regional occurrence for rarity
-    console.log(`[Capture] 📊 Step 5: Fetching regional rarity...`);
+    console.log(`[Capture] ðŸ“Š Step 5: Fetching regional rarity...`);
     const regionalOccurrence = await fetchGbifRegionalOccurrence(
       species.gbifTaxonKey,
       location.countryCode,
@@ -2407,11 +2428,11 @@ export async function processCapture(
     const effectiveOccurrence = regionalOccurrence > 0 ? regionalOccurrence : species.occurrenceCount;
     const rarity = getRarityFromOccurrence(effectiveOccurrence, species.scientificName);
     const xpValue = rarityXp[rarity];
-    console.log(`[Capture] ⭐ Rarity: ${rarity.toUpperCase()} (${effectiveOccurrence.toLocaleString()} occurrences) → ${xpValue} XP`);
+    console.log(`[Capture] â­ Rarity: ${rarity.toUpperCase()} (${effectiveOccurrence.toLocaleString()} occurrences) â†’ ${xpValue} XP`);
     const now = new Date().toISOString();
 
     // Step 6: Create user collection entry
-    console.log(`[Capture] 💾 Step 6: Creating collection entry...`);
+    console.log(`[Capture] ðŸ’¾ Step 6: Creating collection entry...`);
     const { data: collectionRow, error: collectionError } = await supabase
       .from("user_collections")
       .insert({
@@ -2438,7 +2459,7 @@ export async function processCapture(
     await awardXp(supabase, userId, xpValue, "capture", species.commonName, now);
     await applyChallengeProgress(supabase, userId, collection, species);
 
-    console.log(`[Capture] 🎉 SUCCESS! "${species.commonName}" captured as ${rarity.toUpperCase()} for ${xpValue} XP`);
+    console.log(`[Capture] ðŸŽ‰ SUCCESS! "${species.commonName}" captured as ${rarity.toUpperCase()} for ${xpValue} XP`);
     console.log(`${'='.repeat(60)}\n`);
 
     return {
@@ -2448,7 +2469,7 @@ export async function processCapture(
       xpAwarded: xpValue,
     } satisfies CaptureResult;
   } catch (error) {
-    console.error(`[Capture] 💥 ERROR:`, error instanceof Error ? error.message : error);
+    console.error(`[Capture] ðŸ’¥ ERROR:`, error instanceof Error ? error.message : error);
     console.log(`${'='.repeat(60)}\n`);
     const fallback: CaptureFailurePayload = {
       kind: "error",
