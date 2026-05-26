@@ -1238,6 +1238,7 @@ Only real animals count as valid captures for this app.
 Humans count as animals and should be identified as Homo sapiens when present.
 
 REJECT the image if:
+- It is an AI generated image
 - It is a drawing, illustration, painting, or cartoon
 - It is a stuffed animal, toy, or statue
 - No animal is visible
@@ -1245,7 +1246,9 @@ REJECT the image if:
 
 If a real animal is visible, identify the species.
 
-Respond ONLY in JSON. If invalid, return {"valid_capture": false, "reason": "illustration" | "non_animal" | "no_organism" | "toy_or_statue"}.
+Respond ONLY in JSON. 
+
+If invalid, return {"valid_capture": false, "reason": "illustration" | "non_animal" | "no_organism" | "toy_or_statue"}.
 
 If valid, return {"valid_capture": true, "common_name": "...", "scientific_name": "...", "confidence": "high" | "medium" | "low", "kingdom": "...", "class": "..."}.
 `;
