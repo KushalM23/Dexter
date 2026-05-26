@@ -12,7 +12,7 @@ export const ACTION_AREA_CLASS =
   "mx-auto mt-auto flex min-h-30 w-full max-w-sm items-end justify-center pb-2";
 export const SCANNING_PHRASES = ["Identifying..."];
 export const COMMON_INVALID_CAPTURE_MESSAGE =
-  "We couldn't spot a clear plant or animal in that frame. Move closer, keep one living subject centered, and try again.";
+  "We couldn't confirm a real animal in that frame. Plants and other non-animal subjects don't count.";
 
 export function isFailureResult(
   value: CaptureResult | null,

@@ -106,7 +106,24 @@ type DbChallengeProgressRow = {
 };
 
 const INVALID_CAPTURE_MESSAGE =
-  "We could not verify a real plant or animal in this shot. Try again with a clear photo in natural light.";
+  "We could not verify a real animal in this shot. Plants and other non-animal subjects do not count.";
+const CATCHABLE_KINGDOM = "Animalia";
+
+function isCatchableKingdom(kingdom: string | null | undefined) {
+  return kingdom?.trim().toLowerCase() === CATCHABLE_KINGDOM.toLowerCase();
+}
+
+function normalizeSpeciesName(value: string | null | undefined) {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+function unwrapJoinedRow<T>(value: T | T[] | null | undefined) {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+}
 
 async function ensureChallengeTemplates(supabase: SupabaseClient) {
   const seedRows: DbChallengeRow[] = challengeCatalog.map((challenge) => ({
@@ -479,16 +496,21 @@ async function getUserCollectionsWithCards(supabase: SupabaseClient, userId: str
   }
 
   const rows = (data ?? []) as Array<
-    DbUserCollectionRow & { species_cards: DbSpeciesCardRow | null }
+    DbUserCollectionRow & { species_cards: DbSpeciesCardRow | DbSpeciesCardRow[] | null }
   >;
 
-  return rows.map((row) => {
-    const collection = mapUserCollectionRow(row);
-    const cardRow = row.species_cards;
-    return {
-      collection,
-      card: cardRow ? mapSpeciesCardRow(cardRow) : null,
-    };
+  return rows.flatMap((row) => {
+    const cardRow = unwrapJoinedRow(row.species_cards);
+    if (!cardRow || !isCatchableKingdom(cardRow.kingdom)) {
+      return [];
+    }
+
+    return [
+      {
+        collection: mapUserCollectionRow(row),
+        card: mapSpeciesCardRow(cardRow),
+      },
+    ];
   });
 }
 
@@ -578,34 +600,19 @@ async function getCaptureCountWithinWindow(
   from: Date,
   to: Date,
 ) {
-  const { data, error } = await supabase
-    .from("user_collections")
-    .select("id, captured_at")
-    .eq("user_id", userId)
-    .gte("captured_at", from.toISOString())
-    .lte("captured_at", to.toISOString());
-
-  if (error) {
-    throw error;
-  }
-
-  return data?.length ?? 0;
+  const collections = await getUserCollectionsWithCards(supabase, userId);
+  return collections.filter(
+    (entry) =>
+      new Date(entry.collection.capturedAt).getTime() >= from.getTime() &&
+      new Date(entry.collection.capturedAt).getTime() <= to.getTime(),
+  ).length;
 }
 
 async function getCurrentStreak(supabase: SupabaseClient, userId: string) {
-  const { data, error } = await supabase
-    .from("user_collections")
-    .select("captured_at")
-    .eq("user_id", userId);
-
-  if (error) {
-    throw error;
-  }
-
-  const rows = (data ?? []) as Array<{ captured_at: string }>;
+  const collections = await getUserCollectionsWithCards(supabase, userId);
   const dateValues = new Set<string>(
-    rows.map((collection) =>
-      startOfDay(new Date(collection.captured_at)).toISOString(),
+    collections.map((entry) =>
+      startOfDay(new Date(entry.collection.capturedAt)).toISOString(),
     ),
   );
   const dates = Array.from(dateValues)
@@ -962,6 +969,28 @@ async function resolveSpeciesFromAPIs(
     return null;
   }
 
+  if (!isCatchableKingdom(gbifMatch.kingdom)) {
+    console.warn(
+      `[Pipeline] Rejected non-animal GBIF match: ${gbifMatch.canonicalName} (${gbifMatch.kingdom})`,
+    );
+    return {
+      gbifTaxonKey: gbifMatch.usageKey,
+      commonName,
+      scientificName: gbifMatch.canonicalName,
+      kingdom: gbifMatch.kingdom,
+      phylum: gbifMatch.phylum,
+      className: gbifMatch.class,
+      order: gbifMatch.order,
+      family: gbifMatch.family,
+      genus: gbifMatch.genus,
+      species: gbifMatch.species ?? gbifMatch.canonicalName.split(" ").pop() ?? "",
+      photoUrl: "",
+      photoSource: "silhouette",
+      lore: "",
+      occurrenceCount: 0,
+    };
+  }
+
   // Step 2: Get regional occurrence count for rarity
   const occurrenceCount = await fetchGbifRegionalOccurrence(
     gbifMatch.usageKey,
@@ -1148,6 +1177,7 @@ async function findSpeciesByName(
     .from("species_cards")
     .select("*")
     .ilike("common_name", commonName)
+    .eq("kingdom", CATCHABLE_KINGDOM)
     .maybeSingle();
 
   if (commonError) {
@@ -1162,6 +1192,7 @@ async function findSpeciesByName(
     .from("species_cards")
     .select("*")
     .ilike("scientific_name", scientificName)
+    .eq("kingdom", CATCHABLE_KINGDOM)
     .maybeSingle();
 
   if (scientificError) {
@@ -1209,16 +1240,20 @@ async function identifyWithGemini(imageData: string) {
                 // TODO: Re-add screen detection line before production!
                 text: `You are a wildlife species identification expert and fraud detection system.
 
-Analyze this image carefully. Determine if a real animal, plant, or organism is visible.
+Analyze this image carefully. Determine if a real animal is visible.
+
+Only real animals count as valid captures for this app.
+Humans count as animals and should be identified as Homo sapiens when present.
 
 REJECT the image if:
 - It is a drawing, illustration, painting, or cartoon
 - It is a stuffed animal, toy, or statue
-- No organism is visible
+- No animal is visible
+- The subject is a plant, fungus, or any other non-animal organism
 
-If an organism is visible, identify the species.
+If a real animal is visible, identify the species.
 
-Respond ONLY in JSON. If invalid, return {"valid_capture": false, "reason": "illustration" | "no_organism" | "toy_or_statue"}.
+Respond ONLY in JSON. If invalid, return {"valid_capture": false, "reason": "illustration" | "non_animal" | "no_organism" | "toy_or_statue"}.
 
 If valid, return {"valid_capture": true, "common_name": "...", "scientific_name": "...", "confidence": "high" | "medium" | "low", "kingdom": "...", "class": "..."}.
 `,
@@ -1255,16 +1290,20 @@ If valid, return {"valid_capture": true, "common_name": "...", "scientific_name"
                     // TODO: Re-add screen detection line before production!
                     text: `You are a wildlife species identification expert and fraud detection system.
 
-Analyze this image carefully. Determine if a real animal, plant, or organism is visible.
+Analyze this image carefully. Determine if a real animal is visible.
+
+Only real animals count as valid captures for this app.
+Humans count as animals and should be identified as Homo sapiens when present.
 
 REJECT the image if:
 - It is a drawing, illustration, painting, or cartoon
 - It is a stuffed animal, toy, or statue
-- No organism is visible
+- No animal is visible
+- The subject is a plant, fungus, or any other non-animal organism
 
-If an organism is visible, identify the species.
+If a real animal is visible, identify the species.
 
-Respond ONLY in JSON. If invalid, return {"valid_capture": false, "reason": "illustration" | "no_organism" | "toy_or_statue"}.
+Respond ONLY in JSON. If invalid, return {"valid_capture": false, "reason": "illustration" | "non_animal" | "no_organism" | "toy_or_statue"}.
 
 If valid, return {"valid_capture": true, "common_name": "...", "scientific_name": "...", "confidence": "high" | "medium" | "low", "kingdom": "...", "class": "..."}.
 `,
@@ -1611,6 +1650,17 @@ function progressMatchesChallenge(
     }).length;
   }
 
+  if (conditionType.startsWith("capture_species:")) {
+    const target = normalizeSpeciesName(conditionType.split(":")[1]);
+    return collections.filter((entry) => {
+      const scientificName =
+        entry.id === collection.id
+          ? card.scientificName
+          : cardLookup.get(entry.speciesCardId)?.scientificName;
+      return normalizeSpeciesName(scientificName) === target;
+    }).length;
+  }
+
   if (conditionType.startsWith("capture_rarity_min:")) {
     const target = conditionType.split(":")[1] as Rarity;
     return collections.filter(
@@ -1683,15 +1733,16 @@ async function applyChallengeProgress(
   }
 
   const cardLookup = new Map<string, SpeciesCardRecord>(
-    ((cardRows ?? []) as DbSpeciesCardRow[]).map((row) => [
-      row.id,
-      mapSpeciesCardRow(row),
-    ]),
+    ((cardRows ?? []) as DbSpeciesCardRow[])
+      .map(
+        (row): [string, SpeciesCardRecord] => [row.id, mapSpeciesCardRow(row)],
+      )
+      .filter(([, mappedCard]) => isCatchableKingdom(mappedCard.kingdom)),
   );
 
-  const existingCollections = collectionRowList.map((row) =>
-    mapUserCollectionRow(row),
-  );
+  const existingCollections = collectionRowList
+    .map((row) => mapUserCollectionRow(row))
+    .filter((entry) => cardLookup.has(entry.speciesCardId));
 
   const progressEntries = dedupeChallengeProgressEntries(
     progressRows
@@ -1761,9 +1812,7 @@ async function applyChallengeProgress(
     );
 
     let nextProgress = progress.progress;
-    if (challenge.conditionType === "capture_any") {
-      nextProgress = Math.min(progress.progress + 1, challenge.targetCount);
-    } else if (computedProgress > 0) {
+    if (computedProgress > 0) {
       nextProgress = Math.max(progress.progress, computedProgress);
     }
 
@@ -2148,7 +2197,7 @@ export async function getLeaderboardData(
 
   const { data: collectionRows, error: collectionError } = await supabase
     .from("user_collections")
-    .select("user_id, rarity");
+    .select("user_id, rarity, species_cards(kingdom)");
 
   if (collectionError) {
     throw collectionError;
@@ -2158,9 +2207,14 @@ export async function getLeaderboardData(
   const collectionRowList = (collectionRows ?? []) as Array<{
     user_id: string;
     rarity: Rarity;
+    species_cards: Array<Pick<DbSpeciesCardRow, "kingdom">> | Pick<DbSpeciesCardRow, "kingdom"> | null;
   }>;
 
   for (const row of collectionRowList) {
+    const speciesCard = unwrapJoinedRow(row.species_cards);
+    if (!isCatchableKingdom(speciesCard?.kingdom)) {
+      continue;
+    }
     const userRarity = rarityByUser.get(row.user_id) ?? null;
     const next = row.rarity;
     if (!userRarity || rarityIndex(next) > rarityIndex(userRarity)) {
@@ -2249,6 +2303,15 @@ export async function processCapture(
       };
     }
 
+    if (!isCatchableKingdom(analysis.kingdom)) {
+      console.log(`[Capture] ❌ Non-animal subject rejected: ${analysis.kingdom}`);
+      return {
+        kind: "invalid",
+        reason: "non_animal",
+        message: INVALID_CAPTURE_MESSAGE,
+      };
+    }
+
     if (analysis.confidence === "low") {
       console.log(`[Capture] ⚠️ Low confidence — aborting`);
       return {
@@ -2290,6 +2353,15 @@ export async function processCapture(
       console.log(`[Capture] ✅ Resolved: ${resolved.commonName} (${resolved.scientificName})`);
       console.log(`[Capture]    Photo: ${resolved.photoSource} | Lore: ${resolved.lore ? resolved.lore.slice(0, 60) + '...' : '(none)'}`);
       console.log(`[Capture]    Occurrence: ${resolved.occurrenceCount.toLocaleString()}`);
+
+      if (!isCatchableKingdom(resolved.kingdom)) {
+        console.log(`[Capture] ❌ Non-animal species rejected after GBIF resolution: ${resolved.kingdom}`);
+        return {
+          kind: "invalid",
+          reason: "non_animal",
+          message: INVALID_CAPTURE_MESSAGE,
+        };
+      }
 
       // Step 3: Create the species card
       console.log(`[Capture] 💾 Step 3: Upserting species card...`);

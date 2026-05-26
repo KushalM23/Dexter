@@ -61,8 +61,8 @@ export function AuthScreen() {
 
         {/* Tagline */}
         <p className="mt-5 max-w-72 text-base leading-relaxed text-white/90">
-          Snap real animals, plants, and organisms. Dexter turns every sighting
-          into a collectible field card.
+          Snap real animals, from birds to insects, and Dexter turns every
+          sighting into a collectible field card.
         </p>
       </motion.div>
 

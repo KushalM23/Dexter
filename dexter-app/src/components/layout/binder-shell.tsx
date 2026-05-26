@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { tabThemeConfig, tabs } from "@/lib/constants";
 import { getThemeStyle } from "@/lib/theme";
 import type { TabSlug } from "@/lib/types";
+import { ChallengeNotificationProvider } from "@/components/layout/challenge-notification";
 
 function pathForTab(slug: TabSlug) {
   return slug === "home" ? "/home" : `/${slug}`;
@@ -88,28 +89,30 @@ export function BinderShell({
       </div>
 
       <div className="relative z-10 flex-1 overflow-y-auto">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={pathname}
-            initial={{
-              opacity: 0,
-              y: activeIndex > tabs.length / 2 ? 30 : -30,
-            }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{
-              opacity: 0,
-              y: activeIndex > tabs.length / 2 ? -20 : 20,
-            }}
-            transition={{
-              type: "spring",
-              stiffness: 300,
-              damping: 30,
-            }}
-            className="mx-auto flex min-h-full w-full max-w-4xl flex-col"
-          >
-            <main className="flex-1 px-4 py-8">{children}</main>
-          </motion.div>
-        </AnimatePresence>
+        <ChallengeNotificationProvider>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={pathname}
+              initial={{
+                opacity: 0,
+                y: activeIndex > tabs.length / 2 ? 30 : -30,
+              }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{
+                opacity: 0,
+                y: activeIndex > tabs.length / 2 ? -20 : 20,
+              }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 30,
+              }}
+              className="mx-auto flex min-h-full w-full max-w-4xl flex-col"
+            >
+              <main className="flex-1 px-4 py-8">{children}</main>
+            </motion.div>
+          </AnimatePresence>
+        </ChallengeNotificationProvider>
       </div>
     </div>
   );

@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS public.species_cards (
   gbif_taxon_key bigint NOT NULL UNIQUE,
   common_name text NOT NULL,
   scientific_name text NOT NULL,
-  kingdom text NOT NULL,
+  kingdom text NOT NULL CHECK (kingdom = 'Animalia'),
   phylum text NOT NULL,
   class_name text NOT NULL,
   order_name text NOT NULL,

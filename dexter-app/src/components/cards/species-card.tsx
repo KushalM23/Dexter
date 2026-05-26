@@ -156,46 +156,6 @@ function BirdIllustration() {
   );
 }
 
-// Retro Sprout (Plantae)
-function PlantIllustration() {
-  return (
-    <svg viewBox="0 0 100 100" className="w-full h-full">
-      <ellipse cx="50" cy="85" rx="22" ry="5" fill="#1A1A1A" opacity="0.15" />
-      <path
-        d="M 35,65 L 65,65 L 60,85 L 40,85 Z"
-        fill="#E07A5F"
-        stroke="#1A1A1A"
-        strokeWidth="3.5"
-        strokeLinejoin="round"
-      />
-      <rect x="32" y="60" width="36" height="6" rx="2" fill="#F4F1DE" stroke="#1A1A1A" strokeWidth="3.5" />
-      <rect x="36" y="58" width="28" height="4" fill="#6B513E" />
-      <path d="M 50,60 Q 52,38 48,25" fill="none" stroke="#1FC147" strokeWidth="5.5" strokeLinecap="round" />
-      <path
-        d="M 49,42 Q 32,32 40,48 Z"
-        fill="#1FC147"
-        stroke="#1A1A1A"
-        strokeWidth="3.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M 51,35 Q 68,25 60,40 Z"
-        fill="#1FC147"
-        stroke="#1A1A1A"
-        strokeWidth="3.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M 48,23 C 48,23 44,12 40,15 C 38,18 45,23 48,23 Z"
-        fill="#92E7A6"
-        stroke="#1A1A1A"
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 // Cute Forest Mushroom (Fungi)
 function MushroomIllustration() {
   return (
@@ -330,9 +290,6 @@ function SpeciesIllustration({ className, commonName }: IllustrationProps) {
   }
   if (className === "Aves") {
     return <BirdIllustration />;
-  }
-  if (className === "Plantae") {
-    return <PlantIllustration />;
   }
   if (className === "Fungi") {
     return <MushroomIllustration />;

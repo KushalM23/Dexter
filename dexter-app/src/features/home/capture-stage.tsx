@@ -1,5 +1,5 @@
 import Image from "next/image";
-import type { RefObject } from "react";
+import type { Ref } from "react";
 import { motion } from "framer-motion";
 import { X, RotateCcw, ArrowRight } from "lucide-react";
 import { DexterEyes } from "@/components/ui/illustrations";
@@ -24,7 +24,7 @@ type HomeCaptureStageProps = {
   captureData: string | null;
   cameraError: string | null;
   scanningPhraseIndex: number;
-  videoRef: RefObject<HTMLVideoElement | null>;
+  videoRef: Ref<HTMLVideoElement>;
   isPending: boolean;
   onClose: () => void;
   onReturnHome: () => void;

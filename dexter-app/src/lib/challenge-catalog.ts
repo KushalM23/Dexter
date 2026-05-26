@@ -44,6 +44,26 @@ function classChallenge(
   });
 }
 
+function speciesChallenge(
+  slug: string,
+  title: string,
+  description: string,
+  type: "daily" | "weekly" | "achievement",
+  scientificName: string,
+  targetCount: number,
+  xpReward: number,
+) {
+  return createChallenge({
+    slug,
+    title,
+    description,
+    type,
+    targetCount,
+    xpReward,
+    conditionType: `capture_species:${scientificName.toLowerCase()}`,
+  });
+}
+
 function rarityChallenge(
   slug: string,
   title: string,
@@ -644,14 +664,14 @@ const achievements: ChallengeTemplateRecord[] = [
     1,
     55,
   ),
-  classChallenge(
-    "achievement-frog-finder",
-    "Frog Finder",
-    "Capture your first amphibian.",
+  speciesChallenge(
+    "achievement-only-human",
+    "Only Human",
+    "Catch a human. Dexter logs Homo sapiens too.",
     "achievement",
-    "Amphibia",
+    "Homo sapiens",
     1,
-    65,
+    120,
   ),
   classChallenge(
     "achievement-scale-spotter",

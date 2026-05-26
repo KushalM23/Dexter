@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
@@ -23,6 +23,17 @@ export function HomeScreen({ data }: { data: HomeData }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  const setVideoRef = useCallback((node: HTMLVideoElement | null) => {
+    videoRef.current = node;
+    if (node && streamRef.current) {
+      node.srcObject = streamRef.current;
+      node.play().catch((err) => {
+        console.error("Failed to play camera stream in callback ref:", err);
+      });
+    }
+  }, []);
+
   const [mode, setMode] = useState<HomeScreenMode>("idle");
   const [captureData, setCaptureData] = useState<string | null>(null);
   const [result, setResult] = useState<CaptureResult | null>(null);
@@ -87,6 +98,18 @@ export function HomeScreen({ data }: { data: HomeData }) {
     requestLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).dexter_capture_active = mode !== "idle";
+      
+      // If we transition back to "idle" (i.e. user comes back home out of capture/result screens),
+      // dispatch a custom event to instantly check for challenges.
+      if (mode === "idle") {
+        window.dispatchEvent(new CustomEvent("check-challenges"));
+      }
+    }
+  }, [mode]);
 
   useEffect(() => {
     if (mode !== "camera") {
@@ -266,7 +289,7 @@ export function HomeScreen({ data }: { data: HomeData }) {
               captureData={captureData}
               cameraError={cameraError}
               scanningPhraseIndex={scanningPhraseIndex}
-              videoRef={videoRef}
+              videoRef={setVideoRef}
               isPending={isPending}
               onClose={closeCapture}
               onReturnHome={returnToIdle}
