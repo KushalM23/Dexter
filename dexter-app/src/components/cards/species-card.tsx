@@ -277,6 +277,80 @@ function DefaultIllustration() {
   );
 }
 
+// Retro Pixel Art Bison Illustration (Mammalia)
+function BisonIllustration() {
+  const colors: Record<string, string> = {
+    "k": "#1a1a1a",     // black outline
+    "g": "#dca134",     // gold/yellow highlights
+    "h": "#bf966c",     // horn/hoof tan
+    "l": "#a66f4e",     // light brown / face highlight
+    "b": "#785147",     // medium brown (body)
+    "d": "#5c3c35",     // dark brown (hump/neck)
+    "s": "#4a302b",     // shadow brown (belly/back legs)
+  };
+
+  const grid = [
+    ".............kkkkkk....................",
+    "...........kkgggggbkk..................",
+    "..........kggbbbbbbgbkkk...............",
+    ".........kgbbbbbbbbbbbbskk.............",
+    ".k......kgbksbbbbbbbbbbdsbkkk..........",
+    "kb..kkkkkkbkbkbbbbbbbssdbbbbskk........",
+    "dd.kgbggbkskhkbbbbllssbbbbbbbbbkkk.....",
+    "dhkdblbbbdsshkbbbbbsbbbbbbbbbbbbbbkh...",
+    "bssblbblbkhhssbbbgsbbbbbbbbbbbbbbbbkb..",
+    ".khlblssbskksbbblssbbbbbbbbbbbbbbbbksk.",
+    ".kdsgsbhhbbbssblbsbbbbbbbbbbbbbbbbbkkk.",
+    ".kkbsblbhbkkksbbsbbbbbbbbbbbbbbbbbbk.k.",
+    "..kbbbbhlbdssbbsbbbbbbbbbbbbssbbbbbk.k.",
+    "..kbbbbbbbdsbbsbbbbbbbbbbbbbssbbbbbk.kk",
+    "..kbbbbbbbskbbbbbbbsdbbbbbbdksbbbbbk.kk",
+    "..kkkkbbbsskbdbbbbbssdbbbbssskbbbbk..kk",
+    "..kkkbdbsskssskbbbbbksssssssskkbbbk..h.",
+    "...kbbbsskkkssskbbbbkssssskkkskkbbk....",
+    "....ksssk..kkksskbbbkkkkkklkssskkbbk...",
+    "....kkdk...kskkkkbbdkh......ksk.kbbk...",
+    "......k.....ksskkbdkkh......kbk..kbk...",
+    "............kbk.kbdkh.......kbk..kbk...",
+    "............kbk.kbdh........kbk..kbk...",
+    "............khk.khbh.......khhk.khhk...",
+    "............kkk.kkd........kkk..kkk....",
+  ];
+
+  const cols = 40;
+  const rows = 25;
+  const pixelSize = 2.2;
+  const xOffset = (100 - cols * pixelSize) / 2;
+  const yOffset = (100 - rows * pixelSize) / 2;
+
+  return (
+    <svg viewBox="0 0 100 100" className="w-full h-full">
+      {/* Soft ground shadow under the feet */}
+      <ellipse cx="50" cy="85" rx="32" ry="8" fill="#1A1A1A" opacity="0.15" />
+      
+      {/* Render Pixel Art Bison */}
+      <g transform={`translate(${xOffset}, ${yOffset})`}>
+        {grid.map((row, rIdx) =>
+          row.split("").map((char, cIdx) => {
+            const color = colors[char];
+            if (!color) return null;
+            return (
+              <rect
+                key={`${rIdx}-${cIdx}`}
+                x={cIdx * pixelSize}
+                y={rIdx * pixelSize}
+                width={pixelSize}
+                height={pixelSize}
+                fill={color}
+              />
+            );
+          })
+        )}
+      </g>
+    </svg>
+  );
+}
+
 interface IllustrationProps {
   className: string;
   commonName: string;
@@ -285,8 +359,11 @@ interface IllustrationProps {
 function SpeciesIllustration({ className, commonName }: IllustrationProps) {
   const nameLower = commonName.toLowerCase();
   
-  if (nameLower.includes("duck") || nameLower.includes("ducky") || className === "Mammalia") {
+  if (nameLower.includes("duck") || nameLower.includes("ducky")) {
     return <DuckMascot />;
+  }
+  if (className === "Mammalia" || nameLower.includes("bison") || nameLower.includes("buffalo")) {
+    return <BisonIllustration />;
   }
   if (className === "Aves") {
     return <BirdIllustration />;
@@ -356,10 +433,6 @@ function RetroCompassIcon() {
     <Compass className="h-4.5 w-4.5 text-[#1A1A1A] stroke-[2.5]" />
   );
 }
-
-// ==========================================
-// EXPORTS & CARD SPECIFICATIONS
-// ==========================================
 
 export interface SpeciesCardProps {
   commonName: string;
