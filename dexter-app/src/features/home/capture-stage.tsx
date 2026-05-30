@@ -1,5 +1,5 @@
 import Image from "next/image";
-import type { Ref } from "react";
+import { useRef, useState, type Ref } from "react";
 import { motion } from "framer-motion";
 import { X, RotateCcw, ArrowRight } from "lucide-react";
 import { DexterEyes } from "@/components/ui/illustrations";
@@ -26,6 +26,8 @@ type HomeCaptureStageProps = {
   scanningPhraseIndex: number;
   videoRef: Ref<HTMLVideoElement>;
   isPending: boolean;
+  zoom: number;
+  onZoomChange: (zoom: number) => void;
   onClose: () => void;
   onReturnHome: () => void;
   onTakeShot: () => void;
@@ -40,6 +42,8 @@ export function HomeCaptureStage({
   scanningPhraseIndex,
   videoRef,
   isPending,
+  zoom,
+  onZoomChange,
   onClose,
   onReturnHome,
   onTakeShot,
@@ -47,6 +51,97 @@ export function HomeCaptureStage({
   onResetToCamera,
 }: HomeCaptureStageProps) {
   const heading = SCANNING_PHRASES[scanningPhraseIndex];
+
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const startXRef = useRef(0);
+  const startVRef = useRef(0);
+
+  // Convert zoom to slider index value v (0 to 3)
+  let v = 0;
+  if (zoom >= 1 && zoom <= 2) {
+    v = zoom - 1;
+  } else if (zoom > 2 && zoom <= 4) {
+    v = 1 + (zoom - 2) / 2;
+  } else if (zoom > 4 && zoom <= 10) {
+    v = 2 + (zoom - 4) / 6;
+  }
+
+  const handleSliderChange = (val: number) => {
+    // Magnetic snapping: if val is very close to index 0, 1, 2, or 3, snap it!
+    const index = Math.round(val);
+    if (Math.abs(val - index) < 0.12) {
+      val = index;
+    }
+
+    let nextZoom = 1;
+    if (val >= 0 && val <= 1) {
+      nextZoom = 1 + val;
+    } else if (val > 1 && val <= 2) {
+      nextZoom = 2 + (val - 1) * 2;
+    } else if (val > 2 && val <= 3) {
+      nextZoom = 4 + (val - 2) * 6;
+    }
+    // Round to 2 decimal places to prevent floating point inaccuracies
+    onZoomChange(Math.round(nextZoom * 100) / 100);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!trackRef.current) return;
+    trackRef.current.setPointerCapture(e.pointerId);
+    setIsDragging(true);
+
+    const isPresetButton = (e.target as HTMLElement).closest("button");
+    if (isPresetButton) {
+      startXRef.current = e.clientX;
+      startVRef.current = v; // Start dragging directly from the preset's value
+      return;
+    }
+
+    const rect = trackRef.current.getBoundingClientRect();
+    const padding = 4;
+    const thumbWidth = 48; // Pill thumb width (48px)
+    const dragWidth = rect.width - padding * 2 - thumbWidth;
+
+    const relativeX = e.clientX - rect.left - padding - thumbWidth / 2;
+    const percentage = Math.max(0, Math.min(1, relativeX / dragWidth));
+    const initialV = percentage * 3;
+
+    startXRef.current = e.clientX;
+    startVRef.current = initialV;
+
+    handleSliderChange(initialV);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging || !trackRef.current) return;
+
+    const rect = trackRef.current.getBoundingClientRect();
+    const padding = 4;
+    const thumbWidth = 48; // Pill thumb width (48px)
+    const dragWidth = rect.width - padding * 2 - thumbWidth;
+
+    const deltaX = e.clientX - startXRef.current;
+    const deltaV = (deltaX / dragWidth) * 3;
+    const nextV = Math.max(0, Math.min(3, startVRef.current + deltaV));
+
+    handleSliderChange(nextV);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    setIsDragging(false);
+    if (trackRef.current) {
+      try {
+        trackRef.current.releasePointerCapture(e.pointerId);
+      } catch (err) {
+        // Safe catch
+      }
+    }
+  };
+
+  const handlePresetPointerDown = (preset: number, e: React.PointerEvent) => {
+    onZoomChange(preset);
+  };
 
   return (
     <>
@@ -62,11 +157,13 @@ export function HomeCaptureStage({
           className="relative h-full w-full"
         >
           {mode === "camera" ? (
-            <video
+            <motion.video
               ref={videoRef}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover origin-center"
               playsInline
               muted
+              animate={{ scale: zoom }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
             />
           ) : null}
 
@@ -156,9 +253,50 @@ export function HomeCaptureStage({
           </motion.div>
         ) : null}
 
-        <div className="pointer-events-auto mt-auto flex w-full justify-center px-4 pb-10">
+        <div className="pointer-events-auto mt-auto flex w-full flex-col items-center gap-6 px-4 pb-10">
           {mode === "camera" && !cameraError ? (
-            <div className="h-[84px] w-[84px]" />
+            <>
+              {/* Unified Draggable Presets Slider Panel (Sleek Subtle Pill Design) */}
+              <div
+                ref={trackRef}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                className="relative w-56 h-8 bg-black/15 border border-white/5 rounded-full flex items-center justify-between px-1 backdrop-blur-md shadow-md select-none mb-3 overflow-hidden touch-none cursor-pointer"
+              >
+                {/* Preset Indicator Labels */}
+                {[1, 2, 4, 10].map((preset, index) => {
+                  const distance = Math.abs(v - index);
+                  const opacity = Math.min(1, distance * 2);
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      onPointerDown={(e) => handlePresetPointerDown(preset, e)}
+                      style={{
+                        left: `calc(8px + ${(index / 3)} * (100% - 56px))`,
+                        opacity: opacity
+                      }}
+                      className="absolute z-10 w-10 h-6 text-[9.5px] font-bold text-white/45 hover:text-white/75 transition-opacity flex items-center justify-center pointer-events-auto cursor-pointer"
+                    >
+                      {preset}x
+                    </button>
+                  );
+                })}
+
+                {/* Floating Sleek Pill Thumb with Integrated Number */}
+                <div
+                  style={{
+                    left: `calc(4px + ${(v / 3)} * (100% - 56px))`
+                  }}
+                  className="absolute z-20 h-6 w-12 rounded-full bg-theme-accent text-white font-black text-[9.5px] shadow-[0_1.5px_4px_rgba(0,0,0,0.3)] flex items-center justify-center pointer-events-none transition-all duration-75 ease-out origin-center"
+                >
+                  {zoom % 1 === 0 ? `${zoom.toFixed(0)}x` : `${zoom.toFixed(1)}x`}
+                </div>
+              </div>
+
+              <div className="h-[84px] w-[84px]" />
+            </>
           ) : null}
 
           {mode === "processing" ? <div className="min-h-30" /> : null}

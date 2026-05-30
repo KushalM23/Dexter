@@ -44,6 +44,7 @@ export function HomeScreen({ data }: { data: HomeData }) {
   const [isPending, setIsPending] = useState(false);
   const [revealReady, setRevealReady] = useState(false);
   const [scanningPhraseIndex, setScanningPhraseIndex] = useState(0);
+  const [zoom, setZoom] = useState<number>(1);
 
   const captureFailure = isFailureResult(result) ? result : null;
   const activeCaptureMode =
@@ -171,7 +172,23 @@ export function HomeScreen({ data }: { data: HomeData }) {
 
     if (!context) return;
 
-    context.drawImage(videoRef.current, 0, 0, width, height);
+    // Crop the source video based on the zoom level (centered crop)
+    const sourceWidth = width / zoom;
+    const sourceHeight = height / zoom;
+    const sourceX = (width - sourceWidth) / 2;
+    const sourceY = (height - sourceHeight) / 2;
+
+    context.drawImage(
+      videoRef.current,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      0,
+      0,
+      width,
+      height
+    );
     const next = canvasRef.current.toDataURL("image/jpeg", 0.85);
     setCaptureData(next);
     setMode("preview");
@@ -216,6 +233,7 @@ export function HomeScreen({ data }: { data: HomeData }) {
     setResult(null);
     setRevealReady(false);
     setMode("camera");
+    setZoom(1);
   };
 
   const returnToIdle = () => {
@@ -223,6 +241,7 @@ export function HomeScreen({ data }: { data: HomeData }) {
     setResult(null);
     setRevealReady(false);
     setMode("idle");
+    setZoom(1);
     router.refresh();
   };
 
@@ -231,6 +250,7 @@ export function HomeScreen({ data }: { data: HomeData }) {
     setResult(null);
     setRevealReady(false);
     setMode("idle");
+    setZoom(1);
   };
 
   return (
@@ -291,6 +311,8 @@ export function HomeScreen({ data }: { data: HomeData }) {
               scanningPhraseIndex={scanningPhraseIndex}
               videoRef={setVideoRef}
               isPending={isPending}
+              zoom={zoom}
+              onZoomChange={setZoom}
               onClose={closeCapture}
               onReturnHome={returnToIdle}
               onTakeShot={takeShot}
@@ -312,12 +334,12 @@ export function HomeScreen({ data }: { data: HomeData }) {
                 whileTap={{ scale: 0.85 }}
                 type="button"
                 onClick={closeCapture}
-                className="flex h-14 w-14 shrink-0 items-center justify-center bg-theme-accent rounded-full text-white shadow-[0_2px_12px_rgba(0,0,0,0.4)] transition-transform"
+                className="flex h-10 w-10 shrink-0 items-center justify-center bg-theme-accent rounded-full text-white shadow-md transition-transform"
               >
-                <X className="h-8 w-8" strokeWidth={6} />
+                <X className="h-5 w-5" strokeWidth={5} />
               </motion.button>
             ) : (
-              <div className="h-14 w-14 shrink-0 pointer-events-none" />
+              <div className="h-10 w-10 shrink-0 pointer-events-none" />
             )}
 
             <motion.button
