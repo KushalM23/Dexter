@@ -78,7 +78,7 @@ export function HomeCaptureResult({
           className="flex flex-1 flex-col pt-8 pb-24"
         >
           <div className="shrink-0">
-            <div className="display-title !text-[2.8rem] text-theme-accent">
+            <div className="display-title !text-[clamp(1.8rem,7vw,2.8rem)] text-theme-accent">
               {captureFailure.kind === "invalid"
                 ? "No wild subject found"
                 : captureFailure.kind === "low_confidence"
@@ -96,7 +96,7 @@ export function HomeCaptureResult({
               transition={{ duration: 4, repeat: Infinity, times: [0, 0.9, 0.93, 0.96, 1], ease: "easeInOut" }}
               className="origin-center"
             >
-              <DexterEyes size={220} />
+              <DexterEyes size={Math.min(220, window.innerWidth * 0.45)} />
             </motion.div>
 
             <div
@@ -137,12 +137,12 @@ export function HomeCaptureResult({
         {/* Floating particles background inside portal for immersive feel */}
         <div className="absolute inset-0 pointer-events-none texture-overlay opacity-15" />
 
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
+        <div className="flex-1 flex flex-col items-center justify-start p-4 overflow-y-auto overflow-x-hidden min-h-0 w-full custom-scrollbar pt-6 pb-16">
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="w-full max-w-sm flex flex-col items-center gap-6 text-center"
+            className="w-full max-w-sm flex flex-col items-center gap-4 sm:gap-6 text-center shrink-0 my-auto"
           >
             {/* XP Awarded badge - only after card reveal is complete */}
             {localRevealReady && (
@@ -158,7 +158,7 @@ export function HomeCaptureResult({
             )}
 
             {/* The Cinematic Species Card Reveal wrapper */}
-            <div className="w-full max-w-[340px] drop-shadow-[0_15px_35px_rgba(0,0,0,0.65)] relative my-2">
+            <div className="w-full max-w-[min(340px,85vw)] drop-shadow-[0_15px_35px_rgba(0,0,0,0.65)] relative my-2">
               <RevealSpeciesCard
                 key={activeRarity}
                 commonName={result.card.commonName}
@@ -198,7 +198,7 @@ export function HomeCaptureResult({
         </div>
 
         {/* Button action container at the bottom (nested in flexbox flow for perfect spacing) */}
-        <div className="w-full max-w-sm mx-auto px-4 pb-12 pt-2 z-50">
+        <div className="w-full max-w-sm mx-auto px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 z-50">
           <div className="flex w-full flex-col gap-3">
             {localRevealReady && (
               <motion.button
@@ -234,11 +234,11 @@ export function HomeCaptureResult({
         {/* Floating particles background inside portal for immersive feel */}
         <div className="absolute inset-0 pointer-events-none texture-overlay opacity-15" />
 
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
+        <div className="flex-1 flex flex-col items-center justify-start p-4 overflow-y-auto overflow-x-hidden min-h-0 w-full custom-scrollbar pt-6 pb-16">
           <motion.div 
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-full max-w-sm flex flex-col items-center gap-6 text-center"
+            className="w-full max-w-sm flex flex-col items-center gap-4 sm:gap-6 text-center shrink-0 my-auto"
           >
             <div 
               className="display-title !text-3xl mb-2 font-black tracking-tight drop-shadow-md"
@@ -247,7 +247,7 @@ export function HomeCaptureResult({
               Already in your DexE
             </div>
 
-            <div className="w-full max-w-[340px] grayscale-[0.12] drop-shadow-[0_15px_35px_rgba(0,0,0,0.55)] my-2">
+            <div className="w-full max-w-[min(340px,85vw)] grayscale-[0.12] drop-shadow-[0_15px_35px_rgba(0,0,0,0.55)] my-2">
               <RevealSpeciesCard
                 key={activeRarity}
                 commonName={result.card.commonName}
@@ -285,7 +285,7 @@ export function HomeCaptureResult({
         </div>
 
         {/* Button action container at the bottom (nested in flexbox flow for perfect spacing) */}
-        <div className="w-full max-w-sm mx-auto px-4 pb-12 pt-2 z-50">
+        <div className="w-full max-w-sm mx-auto px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 z-50">
           <div className="flex w-full flex-col gap-3">
             {localRevealReady && (
               <motion.button
@@ -321,7 +321,7 @@ export function HomeCaptureResult({
         className="flex flex-1 flex-col pt-8 pb-24"
       >
         <div className="shrink-0">
-          <div className="display-title !text-[2.8rem] text-theme-accent">
+          <div className="display-title !text-[clamp(1.8rem,7vw,2.8rem)] text-theme-accent">
             Something went wrong!
           </div>
           <p className="mt-10 max-w-72 text-base leading-relaxed text-foreground font-medium">
@@ -335,7 +335,7 @@ export function HomeCaptureResult({
             transition={{ duration: 4, repeat: Infinity, times: [0, 0.9, 0.93, 0.96, 1], ease: "easeInOut" }}
             className="origin-center"
           >
-            <DexterEyes size={220} />
+            <DexterEyes size={Math.min(220, window.innerWidth * 0.45)} />
           </motion.div>
 
           <div

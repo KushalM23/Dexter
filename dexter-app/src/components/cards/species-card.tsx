@@ -664,7 +664,7 @@ function CardCompact(props: SpeciesCardProps) {
 
   return (
     <div
-      className="relative h-full w-full overflow-hidden rounded-2xl border-3 border-[#1A1A1A] flex flex-col p-2.5 shadow-[4px_4px_0px_#1A1A1A]"
+      className="relative h-full w-full overflow-hidden rounded-2xl border-2 sm:border-3 border-[#1A1A1A] flex flex-col p-2 sm:p-2.5 shadow-[3px_3px_0px_#1A1A1A] sm:shadow-[4px_4px_0px_#1A1A1A]"
       style={{ backgroundColor: themeColor }}
     >
       {/* Holographic glare effect overlay */}
@@ -709,7 +709,7 @@ function CardFront(props: SpeciesCardProps) {
 
   return (
     <div
-      className="relative h-full w-full overflow-hidden rounded-2xl border-4 border-[#000000] p-4 flex flex-col justify-between shadow-[8px_8px_0px_#000000] transition-all select-none"
+      className="relative h-full w-full overflow-hidden rounded-2xl border-3 sm:border-4 border-[#000000] p-3 sm:p-4 flex flex-col justify-between shadow-[5px_5px_0px_#000000] sm:shadow-[8px_8px_0px_#000000] transition-all select-none"
       style={{ backgroundColor: themeColor }}
     >
       {/* Holographic glare effect overlay */}
@@ -740,7 +740,7 @@ function CardFront(props: SpeciesCardProps) {
         <div className="flex items-end justify-between select-none">
           <div className="min-w-0 flex-1">
             <div
-              className="text-3xl leading-[1.0] tracking-wide text-white truncate drop-shadow-[3px_3px_0_rgba(0,0,0,1)]"
+              className="text-xl sm:text-3xl leading-[1.0] tracking-wide text-white truncate drop-shadow-[3px_3px_0_rgba(0,0,0,1)]"
               style={{ fontFamily: "var(--font-display)" }}
             >
               {props.commonName}
@@ -789,7 +789,7 @@ function CardBack(props: SpeciesCardProps) {
 
   return (
     <div
-      className="relative h-full w-full overflow-hidden rounded-2xl border-4 border-[#000000] p-4 flex flex-col justify-between shadow-[8px_8px_0px_#000000] text-white select-none"
+      className="relative h-full w-full overflow-hidden rounded-2xl border-3 sm:border-4 border-[#000000] p-3 sm:p-4 flex flex-col justify-between shadow-[5px_5px_0px_#000000] sm:shadow-[8px_8px_0px_#000000] text-white select-none"
       style={{
         background: `linear-gradient(180deg, ${cardTheme.dark} 0%, #0d0d10 90%)`,
       }}
@@ -808,7 +808,7 @@ function CardBack(props: SpeciesCardProps) {
             {taxonomyEntries.map((entry) => (
               <div 
                 key={entry.label} 
-                className="bg-white/[0.02] border border-white/[0.06] rounded-md px-2 py-1 flex items-center justify-between h-[26px]"
+                className="bg-white/[0.02] border border-white/[0.06] rounded-md px-1.5 sm:px-2 py-1 flex items-center justify-between min-h-[22px] sm:min-h-[26px]"
               >
                 <span className="text-[9px] uppercase tracking-wider text-white/40 font-bold leading-none">
                   {entry.label}
@@ -935,7 +935,7 @@ function CardModal(props: SpeciesCardProps & { open: boolean; onClose: () => voi
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-[99999] flex flex-col items-center justify-center px-4 backdrop-blur-[6px]"
+          className="fixed inset-0 z-[99999] flex flex-col items-center justify-start p-4 backdrop-blur-[6px] overflow-y-auto"
           style={{
             background: `rgba(0, 0, 0, 0.75)` // Semi-transparent backdrop with theme color tint
           }}
@@ -946,7 +946,7 @@ function CardModal(props: SpeciesCardProps & { open: boolean; onClose: () => voi
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 15, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
-            className="w-full max-w-[340px]"
+            className="w-full max-w-[min(340px,85vw)] my-auto shrink-0 py-6"
             onClick={(event) => event.stopPropagation()}
           >
             <FlippableCard {...props} compact={false} />
@@ -1102,7 +1102,7 @@ function SuspenseEnergyRings({ color }: { color: string }) {
             delay: i * 0.5,
             ease: "easeIn",
           }}
-          className="absolute w-56 h-56 rounded-full border-2"
+          className="absolute w-40 sm:w-56 h-40 sm:h-56 rounded-full border-2"
           style={{
             borderColor: color,
             boxShadow: `0 0 15px ${color}`,
@@ -1130,7 +1130,7 @@ function ShockwaveRing({
       initial={{ scale: 0.1, opacity: 0.85, x: "-50%", y: "-50%" }}
       animate={{ scale: maxScale, opacity: 0, x: "-50%", y: "-50%" }}
       transition={{ duration, ease: "easeOut", delay }}
-      className="absolute left-1/2 top-1/2 w-64 h-64 rounded-full border-4 pointer-events-none z-40"
+      className="absolute left-1/2 top-1/2 w-48 sm:w-64 h-48 sm:h-64 rounded-full border-4 pointer-events-none z-40"
       style={{
         borderColor: color,
         boxShadow: `0 0 45px ${color}, inset 0 0 45px ${color}`,
@@ -1197,7 +1197,7 @@ function DexECardBack({
 
   return (
     <div
-      className="relative h-full w-full overflow-hidden rounded-2xl border-4 border-[#000000] p-4 flex flex-col justify-between shadow-[8px_8px_0px_#000000] bg-[#0B0D13] select-none"
+      className="relative h-full w-full overflow-hidden rounded-2xl border-3 sm:border-4 border-[#000000] p-3 sm:p-4 flex flex-col justify-between shadow-[5px_5px_0px_#000000] sm:shadow-[8px_8px_0px_#000000] bg-[#0B0D13] select-none"
     >
       <CardGlareOverlay />
       
@@ -1352,7 +1352,7 @@ function DramaticRevealWrapper({ props, themeColor }: { props: SpeciesCardProps;
             y: { type: "spring", stiffness: config.stiffness, damping: config.damping },
             scale: { duration: 0.6, ease: "easeOut" }
           }}
-          className="relative z-50 w-full max-w-[340px] mx-auto float-idle hover:scale-[1.02] transition-transform duration-300"
+          className="relative z-50 w-full max-w-[min(340px,85vw)] mx-auto float-idle hover:scale-[1.02] transition-transform duration-300"
         >
           {/* Rarity rotating background energy rays */}
           {config.lensFlare && <CinematicEnergyRays color={themeColor} />}

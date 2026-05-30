@@ -789,13 +789,66 @@ async function fetchGbifRegionalOccurrence(
     console.log(`[GBIF] ðŸ“Š Regional occurrence: ${result.toLocaleString()} observations`);
     return result;
   } catch (error) {
-    console.error("[GBIF] âŒ Occurrence count error:", error);
+    console.error("[GBIF] ❌ Occurrence count error:", error);
     return 0;
   }
 }
 
 // ---------------------------------------------------------------------------
-// Photo Fallback Chain (PRD Â§7.6):
+// GBIF — Vernacular (common) name lookup
+// Fetches the preferred English common name from GBIF's checklist bank.
+// Falls back to any English name, then any name at all.
+// ---------------------------------------------------------------------------
+
+async function fetchGbifVernacularName(
+  taxonKey: number,
+): Promise<string | null> {
+  try {
+    console.log(`[GBIF] 🏷️ Fetching vernacular name for taxon ${taxonKey}...`);
+    const url = `https://api.gbif.org/v1/species/${taxonKey}/vernacularNames?limit=100`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.error(`[GBIF] ❌ Vernacular name request failed: ${response.status}`);
+      return null;
+    }
+
+    const data = (await response.json()) as {
+      results?: Array<{
+        vernacularName?: string;
+        language?: string;
+        isPreferred?: boolean;
+      }>;
+    };
+
+    const names = data.results ?? [];
+    if (names.length === 0) {
+      console.log(`[GBIF] ⚠️ No vernacular names found`);
+      return null;
+    }
+
+    // Priority: preferred English > any English > first available
+    const englishNames = names.filter(
+      (n) => n.language?.toLowerCase() === "en" && n.vernacularName,
+    );
+    const preferred = englishNames.find((n) => n.isPreferred);
+    const picked = preferred ?? englishNames[0] ?? names.find((n) => n.vernacularName);
+
+    if (picked?.vernacularName) {
+      console.log(`[GBIF] ✅ Vernacular name: "${picked.vernacularName}" (lang: ${picked.language}, preferred: ${picked.isPreferred ?? false})`);
+      return picked.vernacularName;
+    }
+
+    console.log(`[GBIF] ⚠️ No usable vernacular name in results`);
+    return null;
+  } catch (error) {
+    console.error("[GBIF] ❌ Vernacular name error:", error);
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Photo Fallback Chain (PRD §7.6):
 // 1. iNaturalist  2. GBIF Media  3. Wikipedia  4. Silhouette
 // ---------------------------------------------------------------------------
 
@@ -997,19 +1050,28 @@ async function resolveSpeciesFromAPIs(
     countryCode,
   );
 
-  // Step 3: Fetch photo (fallback chain)
+  // Step 3: Fetch authoritative common name from GBIF (Gemini name as fallback)
+  const gbifVernacular = await fetchGbifVernacularName(gbifMatch.usageKey);
+  const resolvedCommonName = gbifVernacular ?? commonName;
+  if (gbifVernacular) {
+    console.log(`[Pipeline] 🏷️ Using GBIF vernacular name: "${gbifVernacular}" (Gemini said: "${commonName}")`);
+  } else {
+    console.log(`[Pipeline] ⚠️ No GBIF vernacular name, falling back to Gemini: "${commonName}"`);
+  }
+
+  // Step 4: Fetch photo (fallback chain)
   const photo = await fetchSpeciesPhoto(gbifMatch.canonicalName);
 
-  // Step 4: Fetch lore from Wikipedia
+  // Step 5: Fetch lore from Wikipedia
   let lore = await fetchWikipediaLore(gbifMatch.canonicalName);
   if (!lore) {
     // Try with common name as fallback
-    lore = await fetchWikipediaLore(commonName);
+    lore = await fetchWikipediaLore(resolvedCommonName);
   }
 
   return {
     gbifTaxonKey: gbifMatch.usageKey,
-    commonName,
+    commonName: resolvedCommonName,
     scientificName: gbifMatch.canonicalName,
     kingdom: gbifMatch.kingdom,
     phylum: gbifMatch.phylum,
@@ -1245,6 +1307,13 @@ REJECT the image if:
 - The subject is a plant, fungus, or any other non-animal organism
 
 If a real animal is visible, identify the species.
+
+For the common name, use the SHORTEST and most widely-recognized colloquial name that a normal person would use.
+- Use breed-specific names when recognizable (e.g. "Labrador Retriever", NOT "Common Dog, Labrador").
+- Drop unnecessary prefixes like "Common", "Domestic", "Western" unless they are essential to distinguish the species (e.g. "House Sparrow" is fine, but "Common Pigeon" should just be "Pigeon").
+- Keep it to 1-3 words maximum. Examples: "Labrador Retriever", "House Crow", "Bengal Tiger", "Goldfish", "Budgerigar".
+- For domestic dog breeds, use the breed name (e.g. "Golden Retriever", "German Shepherd", "Pug"), NOT generic names like "Dog" or "Domestic Dog".
+- For domestic cats, use the breed if identifiable (e.g. "Persian Cat", "Siamese"), otherwise just "Cat".
 
 Respond ONLY in JSON. 
 

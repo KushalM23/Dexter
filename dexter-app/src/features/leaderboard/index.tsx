@@ -98,9 +98,9 @@ export function LeaderboardScreen({
 
     // Stepped heights for the bar graphs
     const heightClasses = {
-      1: "h-36 sm:h-40",
-      2: "h-28 sm:h-32",
-      3: "h-20 sm:h-24",
+      1: "h-28 sm:h-40",
+      2: "h-20 sm:h-32",
+      3: "h-16 sm:h-24",
     };
 
     const bgStyles = {
@@ -122,9 +122,9 @@ export function LeaderboardScreen({
     };
 
     const overlapClasses = {
-      1: "z-20 w-full max-w-[135px] sm:max-w-[145px]",
-      2: "z-10 w-full max-w-[105px] sm:max-w-[115px] -mr-5 sm:-mr-6",
-      3: "z-10 w-full max-w-[105px] sm:max-w-[115px] -ml-5 sm:-ml-6",
+      1: "z-20 w-[38%] max-w-[145px]",
+      2: "z-10 w-[31%] max-w-[115px] sm:-mr-6",
+      3: "z-10 w-[31%] max-w-[115px] sm:-ml-6",
     };
 
     return (
@@ -133,9 +133,9 @@ export function LeaderboardScreen({
         key={rank}
       >
         {/* Wrapper to preserve Tailwind's horizontal layout translate transforms against Framer Motion overrides */}
-        <div className={rank === 2 ? "-translate-x-5 sm:-translate-x-6" : rank === 3 ? "translate-x-5 sm:translate-x-6" : ""}>
+        <div className={rank === 2 ? "sm:-translate-x-6" : rank === 3 ? "sm:translate-x-6" : ""}>
           {/* Reserve a stable layout container slot for avatars to overlap smoothly without shifting */}
-          <div className="h-[96px] sm:h-[110px] w-[85px] sm:w-[100px] relative flex flex-col items-center justify-end">
+          <div className="h-[76px] sm:h-[110px] w-[70px] sm:w-[100px] relative flex flex-col items-center justify-end">
             <AnimatePresence mode="wait">
               {/* Avatar & Info Stack (Spring-pop slide up on top inside the reserved slot) */}
               <motion.div
@@ -158,10 +158,10 @@ export function LeaderboardScreen({
                 </div>
 
                 {/* User Name */}
-                <div className="w-full mt-2 text-[1rem] sm:text-[11px] font-display uppercase tracking-wider text-black leading-tight text-center break-words max-w-[85px] sm:max-w-[100px] mx-auto min-h-[24px] flex items-center justify-center">
+                <div className="w-full mt-1.5 sm:mt-2 text-[0.7rem] sm:text-[11px] font-display uppercase tracking-wider text-black leading-tight text-center break-words max-w-[70px] sm:max-w-[100px] mx-auto min-h-[20px] sm:min-h-[24px] flex items-center justify-center">
                   {row.user.displayName}
                 </div>
-                <div className={`text-[0.8rem] sm:text-[0.5rem] font-black font-sans mt-1 leading-none text-theme-accent`}>
+                <div className={`text-[0.5rem] sm:text-[0.6rem] font-black font-sans mt-0.5 sm:mt-1 leading-none text-theme-accent`}>
                   Level {level}
                 </div>
               </motion.div>
@@ -212,9 +212,9 @@ export function LeaderboardScreen({
   // Dashed Bar Placeholder for empty columns
   const renderPodiumPlaceholder = (rank: 1 | 2 | 3) => {
     const heightClasses = {
-      1: "h-36 sm:h-40",
-      2: "h-28 sm:h-32",
-      3: "h-20 sm:h-24",
+      1: "h-28 sm:h-40",
+      2: "h-20 sm:h-32",
+      3: "h-16 sm:h-24",
     };
 
     const clipPaths = {
@@ -224,17 +224,17 @@ export function LeaderboardScreen({
     };
 
     const overlapClasses = {
-      1: "z-20 w-full max-w-[135px] sm:max-w-[145px]",
-      2: "z-10 w-full max-w-[105px] sm:max-w-[115px] -mr-5 sm:-mr-6",
-      3: "z-10 w-full max-w-[105px] sm:max-w-[115px] -ml-5 sm:-ml-6",
+      1: "z-20 w-[38%] max-w-[145px]",
+      2: "z-10 w-[31%] max-w-[115px] sm:-mr-6",
+      3: "z-10 w-[31%] max-w-[115px] sm:-ml-6",
     };
 
     return (
       <div className={`flex flex-col items-center justify-end ${overlapClasses[rank]} opacity-35 select-none`} key={rank}>
         {/* Wrapper to preserve Tailwind's horizontal layout translate transforms against Framer Motion overrides */}
-        <div className={rank === 2 ? "-translate-x-5 sm:-translate-x-6" : rank === 3 ? "translate-x-5 sm:translate-x-6" : ""}>
+        <div className={rank === 2 ? "sm:-translate-x-6" : rank === 3 ? "sm:translate-x-6" : ""}>
           {/* Reserve a stable layout container slot for placeholders to overlap smoothly without shifting */}
-          <div className="h-[96px] sm:h-[110px] w-[85px] sm:w-[100px] relative flex flex-col items-center justify-end">
+          <div className="h-[76px] sm:h-[110px] w-[70px] sm:w-[100px] relative flex flex-col items-center justify-end">
             <AnimatePresence mode="wait">
               {/* Placeholder avatar slot (Spring-pop slide up on top inside the reserved slot) */}
               <motion.div
@@ -309,7 +309,7 @@ export function LeaderboardScreen({
       
       {/* ── 2. Stepped Bar-Graph Podium ── */}
       <div className="pt-2 select-none">
-        <div className="h-64 max-w-md mx-auto px-2 relative">
+        <div className="h-52 sm:h-64 max-w-md mx-auto px-1 sm:px-2 relative">
           <motion.div
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
@@ -351,7 +351,7 @@ export function LeaderboardScreen({
       <div className="space-y-3 pt-8 px-1 sm:px-2">
 
         {listRows.length > 0 ? (
-          <div className="max-h-[380px] sm:max-h-[460px] overflow-y-auto pr-1">
+          <div className="max-h-[calc(100dvh-32rem)] sm:max-h-[460px] overflow-y-auto overflow-x-hidden pr-1">
             <AnimatePresence mode="wait">
               <motion.div
                 variants={listContainerVariants}
@@ -457,7 +457,7 @@ export function LeaderboardScreen({
               <button
                 key={value}
                 onClick={() => setScope(value)}
-                className="relative z-10 min-w-[70px] px-3 py-2 text-[10px] font-slackey tracking-[0.08em] leading-none whitespace-nowrap transition-colors duration-250 select-none sm:min-w-[78px] sm:px-3.5"
+                className="relative z-10 min-w-[58px] px-2.5 py-2 text-[10px] font-slackey tracking-[0.08em] leading-none whitespace-nowrap transition-colors duration-250 select-none sm:min-w-[78px] sm:px-3.5"
                 style={{
                   color: active ? "var(--theme-accent)" : "#FFFFFF",
                 }}
