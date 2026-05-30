@@ -34,7 +34,7 @@ export function BinderShell({
       className="theme-scope flex h-[100dvh] w-full overflow-hidden bg-background text-foreground"
       style={getThemeStyle(activeTheme)}
     >
-      <div className="relative z-20 flex h-full w-12 shrink-0 sm:w-14">
+      <div className="relative z-20 flex h-full w-10 shrink-0 sm:w-14">
         <div className="absolute inset-y-0 right-0 z-0 w-0.5 bg-border-strong" />
 
         <nav className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex flex-col">
@@ -59,7 +59,7 @@ export function BinderShell({
                     backgroundColor: active
                       ? "var(--background)"
                       : tabTheme.accent,
-                    height: active ? 160 : 140,
+                    height: active ? "min(160px, 20dvh)" : "min(140px, 17.5dvh)",
                     boxShadow: active
                       ? "none"
                       : "inset -4px 0 6px -3px rgba(0,0,0,0.1)",
@@ -72,7 +72,7 @@ export function BinderShell({
                       color: active ? tabTheme.accent : "var(--surface)",
                       writingMode: "vertical-rl",
                       transform: "rotate(180deg)",
-                      fontSize: active ? "1rem" : "0.875rem",
+                      fontSize: active ? "clamp(0.7rem, 2.5vw, 1rem)" : "clamp(0.6rem, 2vw, 0.875rem)",
                       letterSpacing: "0.08em",
                       textShadow: active
                         ? "none"
@@ -88,7 +88,10 @@ export function BinderShell({
         </nav>
       </div>
 
-      <div className="relative z-10 flex-1 overflow-y-auto">
+      <div 
+        className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden"
+        style={{ overflowX: "hidden" }}
+      >
         <ChallengeNotificationProvider>
           <AnimatePresence mode="wait">
             <motion.div
@@ -109,7 +112,7 @@ export function BinderShell({
               }}
               className="mx-auto flex min-h-full w-full max-w-4xl flex-col"
             >
-              <main className="flex-1 px-4 py-8">{children}</main>
+              <main className="flex-1 px-2 py-6 sm:px-4 sm:py-8">{children}</main>
             </motion.div>
           </AnimatePresence>
         </ChallengeNotificationProvider>

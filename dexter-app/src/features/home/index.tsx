@@ -324,7 +324,7 @@ export function HomeScreen({ data }: { data: HomeData }) {
       </AnimatePresence>
 
       {(mode === "idle" || (mode === "camera" && !cameraError)) ? (
-        <div className="fixed inset-0 left-12 z-40 flex flex-col pointer-events-none sm:left-14">
+        <div className="fixed inset-0 left-10 z-40 flex flex-col pointer-events-none sm:left-14">
           <div className="pointer-events-auto mt-auto flex w-full justify-center items-center gap-6 px-4 pb-10">
             {mode === "camera" ? (
               <motion.button

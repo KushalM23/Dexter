@@ -73,7 +73,7 @@ export function AuthScreen() {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.1 }}
       >
-        <DexterEyes size={220} />
+        <DexterEyes className="w-[160px] sm:w-[220px] h-auto" />
       </motion.div>
 
       {/* Action section - bottom */}

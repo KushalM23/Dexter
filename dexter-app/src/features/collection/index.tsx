@@ -273,7 +273,7 @@ export function CollectionScreen({ items }: { items: CollectionItem[] }) {
 
       {/* Grid Layout of Species Cards */}
       {visibleItems.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4 pt-2">
+        <div className="grid grid-cols-2 gap-2 sm:gap-4 pt-2">
           {visibleItems.map((item) => (
             <SpeciesCard
               key={`${item.card.commonName}-${item.collection.capturedAt}`}

@@ -146,7 +146,7 @@ export function HomeCaptureStage({
   return (
     <>
       <div
-        className="theme-scope fixed inset-0 left-12 z-30 overflow-hidden bg-[#111111] sm:left-14"
+        className="theme-scope fixed inset-0 left-10 z-30 overflow-hidden bg-[#111111] sm:left-14"
         style={getThemeStyle(HOME_THEME)}
       >
         <motion.div
@@ -207,7 +207,7 @@ export function HomeCaptureStage({
         </motion.div>
       </div>
 
-      <div className="fixed inset-0 left-8 z-40 flex flex-col pointer-events-none sm:left-14">
+      <div className="fixed inset-0 left-10 z-40 flex flex-col pointer-events-none sm:left-14">
         <div className="pointer-events-auto flex w-full items-center justify-between px-6 pb-6 pt-10">
           <div className="h-12 w-12 shrink-0" />
           <div className="h-12 w-12 shrink-0" />
@@ -307,7 +307,7 @@ export function HomeCaptureStage({
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="pointer-events-none fixed bottom-12 left-12 right-0 z-40 flex justify-center px-4 sm:left-14"
+          className="pointer-events-none fixed bottom-12 left-10 right-0 z-40 flex justify-center px-4 sm:left-14"
         >
           <div className="pointer-events-auto mx-auto flex w-full max-w-98 flex-row items-stretch justify-center gap-3 text-center">
             <motion.button

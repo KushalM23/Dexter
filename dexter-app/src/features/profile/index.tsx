@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Copy, PencilLine, Check, LogOut, Trophy, Target, Flame, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -48,6 +48,16 @@ export function ProfileScreen({ data }: { data: ProfileData }) {
   const [avatarId, setAvatarId] = useState(data.user.avatarId);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [avatarSize, setAvatarSize] = useState(62);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setAvatarSize(window.innerWidth < 380 ? 44 : 62);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const xpInLvl = data.user.totalXp % 500;
   const level = Math.floor(data.user.totalXp / 500) + 1;
@@ -254,7 +264,7 @@ export function ProfileScreen({ data }: { data: ProfileData }) {
             animate={{ clipPath: "circle(150% at calc(100% - 42px) 94px)" }}
             exit={{ clipPath: "circle(0px at calc(100% - 42px) 94px)" }}
             transition={{ type: "tween", ease: "easeInOut", duration: 0.5 }}
-            className="fixed inset-y-0 left-12 right-0 sm:left-14 z-50 flex flex-col overflow-y-auto px-6 pb-12 pt-20 text-white"
+            className="fixed inset-y-0 left-10 right-0 sm:left-14 z-50 flex flex-col overflow-y-auto overflow-x-hidden px-6 pb-12 pt-20 text-white"
             style={{ backgroundColor: PROFILE_THEME.accent }}
           >
             <div className="mt-12 w-full max-w-md flex flex-col">
@@ -292,7 +302,7 @@ export function ProfileScreen({ data }: { data: ProfileData }) {
                   <span className="block text-xs font-bold uppercase tracking-[0.22em] text-white/80">
                     Avatar
                   </span>
-              <motion.div className="mt-4 sm:mt-12 grid grid-cols-4 gap-4.5 justify-items-center">
+              <motion.div className="mt-4 sm:mt-12 grid grid-cols-4 gap-2.5 sm:gap-4.5 justify-items-center">
                 {avatarOptions.map((optId) => {
                   const active = optId === avatarId;
                   return (
@@ -303,7 +313,7 @@ export function ProfileScreen({ data }: { data: ProfileData }) {
                       whileTap={{ scale: 0.92 }}
                       className="focus:outline-none"
                     >
-                      <AvatarBadge avatarId={optId} selected={active} size={62} />
+                      <AvatarBadge avatarId={optId} selected={active} size={avatarSize} />
                     </motion.button>
                   );
                 })}

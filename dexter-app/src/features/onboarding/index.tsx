@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, ArrowRight, ArrowLeft } from "lucide-react";
@@ -20,6 +20,16 @@ export function OnboardingScreen({
   const [displayName, setDisplayName] = useState(initialName);
   const [copied, setCopied] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [avatarSize, setAvatarSize] = useState(64);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setAvatarSize(window.innerWidth < 380 ? 56 : 76);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleComplete = async () => {
     setIsPending(true);
@@ -120,7 +130,7 @@ export function OnboardingScreen({
                   whileTap={{ scale: 0.92 }}
                   className="focus:outline-none"
                 >
-                  <AvatarBadge avatarId={avatarId} selected={active} size={76} />
+                  <AvatarBadge avatarId={avatarId} selected={active} size={avatarSize} />
                 </motion.button>
               );
             })}
