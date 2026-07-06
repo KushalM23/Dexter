@@ -244,28 +244,63 @@ export function RouteErrorState({
 }) {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-background px-6">
-      <PosterPanel accent={accent} soft={soft} className="w-full max-w-sm">
-        <div className="px-6 py-8 text-center">
-          <div
-            className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border-4 border-border-strong bg-surface"
-            style={{ boxShadow: `6px 6px 0 ${accent}` }}
-          >
-            <AlertTriangle className="h-7 w-7 text-foreground" />
+      <div 
+        className="w-full max-w-sm rounded-[32px] border-4 border-border-strong p-8 text-center relative overflow-hidden"
+        style={{ 
+          backgroundColor: soft, 
+          boxShadow: `8px 8px 0 var(--border-strong)` 
+        }}
+      >
+        {/* Playful background accent patterns */}
+        <div 
+          className="absolute -right-6 -top-6 h-24 w-24 rounded-full opacity-20" 
+          style={{ backgroundColor: accent }} 
+        />
+        <div 
+          className="absolute -left-8 -bottom-8 h-20 w-20 rounded-full border-[6px] opacity-20" 
+          style={{ borderColor: accent }} 
+        />
+
+        <div className="relative z-10">
+          {/* Animated blinking/confused Dexter Eyes */}
+          <div className="flex justify-center mb-6">
+            <motion.div
+              animate={{ scaleY: [1, 1, 0.1, 1, 1] }}
+              transition={{ duration: 4, repeat: Infinity, times: [0, 0.9, 0.93, 0.96, 1], ease: "easeInOut" }}
+              className="origin-center"
+            >
+              <DexterEyes size={100} color={accent} />
+            </motion.div>
           </div>
-          <div className="display-title mt-5 text-foreground">{title}</div>
-          <p className="mt-3 text-sm leading-6 text-ink-muted">{message}</p>
+
+          {/* Heading */}
+          <h2 className="display-title text-foreground text-2xl font-black leading-tight mb-3">
+            {title}
+          </h2>
+          
+          {/* Message */}
+          <p className="text-sm leading-relaxed text-ink-muted font-semibold px-2 mb-8 select-text">
+            {message}
+          </p>
+
+          {/* Neo-brutalist Try Again button */}
           {onRetry ? (
-            <button
+            <motion.button
+              whileTap={{ scale: 0.98 }}
               type="button"
               onClick={onRetry}
-              className="mt-6 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-black uppercase tracking-[0.18em] text-white"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border-4 border-border-strong py-3.5 text-xs font-black uppercase tracking-[0.18em] text-white transition-transform duration-100 hover:-translate-y-0.5 active:translate-y-0"
+              style={{ 
+                boxShadow: `4px 4px 0 var(--border-strong)`,
+                backgroundColor: accent
+              }}
             >
-              <RefreshCcw className="h-4 w-4" />
+              <RefreshCcw className="h-4 w-4 stroke-[3]" />
               Try Again
-            </button>
+            </motion.button>
           ) : null}
         </div>
-      </PosterPanel>
+      </div>
     </div>
   );
 }
