@@ -135,3 +135,16 @@ CREATE INDEX IF NOT EXISTS idx_challenges_type_env
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('captures', 'captures', true)
 ON CONFLICT (id) DO NOTHING;
+
+-- Challenge Cooldowns
+CREATE TABLE IF NOT EXISTS public.user_challenge_cooldowns (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  template_id text NOT NULL,
+  category text NOT NULL,
+  assigned_at timestamptz NOT NULL,
+  expires_at timestamptz NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_challenge_cooldowns_user_expiry 
+  ON public.user_challenge_cooldowns (user_id, expires_at);
