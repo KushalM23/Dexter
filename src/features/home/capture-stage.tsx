@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { useRef, useState, type Ref } from "react";
+import { useRef, useState, useEffect, type Ref } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { X, RotateCcw, ArrowRight } from "lucide-react";
 import { DexterEyes } from "@/components/ui/illustrations";
@@ -55,6 +56,11 @@ export function HomeCaptureStage({
   onResetToCamera,
 }: HomeCaptureStageProps) {
   const heading = SCANNING_PHRASES[scanningPhraseIndex];
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const trackRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -147,7 +153,9 @@ export function HomeCaptureStage({
     onZoomChange(preset);
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <>
       <div
         className="theme-scope fixed inset-0 left-10 z-30 overflow-hidden bg-[#111111] sm:left-14"
@@ -340,7 +348,8 @@ export function HomeCaptureStage({
           </div>
         </motion.div>
       ) : null}
-    </>
+    </>,
+    document.body
   );
 }
 

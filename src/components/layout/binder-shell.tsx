@@ -19,11 +19,13 @@ export function BinderShell({
   title,
   action,
   children,
+  onTabChange,
 }: {
   activeTab: TabSlug;
   title: string;
   action?: ReactNode;
   children: ReactNode;
+  onTabChange?: (slug: TabSlug) => void;
 }) {
   const pathname = usePathname();
   const activeIndex = tabs.findIndex((tab) => tab.slug === activeTab);
@@ -42,6 +44,56 @@ export function BinderShell({
             const active = tab.slug === activeTab;
             const tabTheme = tabThemeConfig[tab.slug];
 
+            const tabContent = (
+              <div
+                className="binder-rail-tab"
+                data-active={active}
+                style={{
+                  backgroundColor: active
+                    ? "var(--background)"
+                    : tabTheme.accent,
+                  height: active ? "min(160px, 20dvh)" : "min(140px, 17.5dvh)",
+                  boxShadow: active
+                    ? "none"
+                    : "inset -4px 0 6px -3px rgba(0,0,0,0.1)",
+                }}
+              >
+                <span
+                  className="select-none transition-colors duration-200"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    color: active ? tabTheme.accent : "var(--surface)",
+                    writingMode: "vertical-rl",
+                    transform: "rotate(180deg)",
+                    fontSize: active ? "clamp(0.7rem, 2.5vw, 1rem)" : "clamp(0.6rem, 2vw, 0.875rem)",
+                    letterSpacing: "0.08em",
+                    textShadow: active
+                      ? "none"
+                      : "0 1px 2px rgba(0,0,0,0.15)",
+                  }}
+                >
+                  {tab.label}
+                </span>
+              </div>
+            );
+
+            if (onTabChange) {
+              return (
+                <button
+                  key={tab.slug}
+                  type="button"
+                  onClick={() => onTabChange(tab.slug)}
+                  className="pointer-events-auto relative block focus:outline-none w-full text-left"
+                  style={{
+                    zIndex: active ? 30 : 10,
+                    marginTop: index === 0 ? 0 : -2,
+                  }}
+                >
+                  {tabContent}
+                </button>
+              );
+            }
+
             return (
               <Link
                 key={tab.slug}
@@ -52,36 +104,7 @@ export function BinderShell({
                   marginTop: index === 0 ? 0 : -2,
                 }}
               >
-                <div
-                  className="binder-rail-tab"
-                  data-active={active}
-                  style={{
-                    backgroundColor: active
-                      ? "var(--background)"
-                      : tabTheme.accent,
-                    height: active ? "min(160px, 20dvh)" : "min(140px, 17.5dvh)",
-                    boxShadow: active
-                      ? "none"
-                      : "inset -4px 0 6px -3px rgba(0,0,0,0.1)",
-                  }}
-                >
-                  <span
-                    className="select-none transition-colors duration-200"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      color: active ? tabTheme.accent : "var(--surface)",
-                      writingMode: "vertical-rl",
-                      transform: "rotate(180deg)",
-                      fontSize: active ? "clamp(0.7rem, 2.5vw, 1rem)" : "clamp(0.6rem, 2vw, 0.875rem)",
-                      letterSpacing: "0.08em",
-                      textShadow: active
-                        ? "none"
-                        : "0 1px 2px rgba(0,0,0,0.15)",
-                    }}
-                  >
-                    {tab.label}
-                  </span>
-                </div>
+                {tabContent}
               </Link>
             );
           })}
@@ -93,28 +116,34 @@ export function BinderShell({
         style={{ overflowX: "hidden" }}
       >
         <ChallengeNotificationProvider>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={pathname}
-              initial={{
-                opacity: 0,
-                y: activeIndex > tabs.length / 2 ? 30 : -30,
-              }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{
-                opacity: 0,
-                y: activeIndex > tabs.length / 2 ? -20 : 20,
-              }}
-              transition={{
-                type: "spring",
-                stiffness: 300,
-                damping: 30,
-              }}
-              className="mx-auto flex min-h-full w-full max-w-4xl flex-col"
-            >
+          {onTabChange ? (
+            <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col">
               <main className="flex-1 px-2 py-6 sm:px-4 sm:py-8">{children}</main>
-            </motion.div>
-          </AnimatePresence>
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={pathname}
+                initial={{
+                  opacity: 0,
+                  y: activeIndex > tabs.length / 2 ? 30 : -30,
+                }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{
+                  opacity: 0,
+                  y: activeIndex > tabs.length / 2 ? -20 : 20,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 30,
+                }}
+                className="mx-auto flex min-h-full w-full max-w-4xl flex-col"
+              >
+                <main className="flex-1 px-2 py-6 sm:px-4 sm:py-8">{children}</main>
+              </motion.div>
+            </AnimatePresence>
+          )}
         </ChallengeNotificationProvider>
       </div>
     </div>

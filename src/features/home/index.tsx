@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
@@ -16,7 +17,7 @@ import { HomeCaptureResult } from "@/features/home/capture-result";
 import { HomeCaptureStage } from "@/features/home/capture-stage";
 import { HomeIdleState } from "@/features/home/idle-state";
 import type { HomeData, HomeScreenMode } from "@/features/home/types";
-import type { CaptureResult } from "@/lib/types";
+import type { CaptureResult, TabSlug } from "@/lib/types";
 interface ZoomCapabilities {
   zoom?: {
     min: number;
@@ -29,8 +30,19 @@ interface ZoomConstraints {
   zoom?: number;
 }
 
-export function HomeScreen({ data }: { data: HomeData }) {
+export function HomeScreen({
+  data,
+  onTabChange,
+}: {
+  data: HomeData;
+  onTabChange?: (slug: TabSlug) => void;
+}) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -445,8 +457,8 @@ export function HomeScreen({ data }: { data: HomeData }) {
               locationStatus={locationStatus}
               locationLabel={locationLabel}
               onRequestLocation={requestLocation}
-              onViewChallenges={() => router.push("/challenges")}
-              onViewDexe={() => router.push("/dexe")}
+              onViewChallenges={() => onTabChange ? onTabChange("challenges") : router.push("/challenges")}
+              onViewDexe={() => onTabChange ? onTabChange("dexe") : router.push("/dexe")}
             />
           </motion.div>
         )}
@@ -501,7 +513,7 @@ export function HomeScreen({ data }: { data: HomeData }) {
         )}
       </AnimatePresence>
 
-      {(mode === "idle" || (mode === "camera" && !cameraError)) ? (
+      {mounted && (mode === "idle" || (mode === "camera" && !cameraError)) ? createPortal(
         <div className="fixed inset-0 left-10 z-40 flex flex-col pointer-events-none sm:left-14">
           <div className="pointer-events-auto mt-auto flex w-full justify-center items-center gap-6 px-4 pb-10">
             {mode === "camera" ? (
@@ -533,7 +545,8 @@ export function HomeScreen({ data }: { data: HomeData }) {
 
             <div className="h-14 w-14 shrink-0 pointer-events-none" />
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
 
       <canvas ref={canvasRef} className="hidden" />
