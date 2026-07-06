@@ -16,6 +16,7 @@ import {
 import type { SupabaseClient, User as SupabaseUser } from "@supabase/supabase-js";
 
 import { challengeCatalog } from "@/lib/challenge-catalog";
+import { generateTailoredChallenges } from "@/lib/challenge-generator";
 import { rarityColors, rarityOrder, rarityXp } from "@/lib/constants";
 import { generatePixelArtImage, isPixelArtConfigured } from "@/lib/pixel-art";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
@@ -1532,8 +1533,16 @@ async function ensureChallenges(
   user: Pick<UserRecord, "id">,
 ) {
   const now = new Date();
-  const templateList = await ensureChallengeTemplates(supabase);
-  const challenges = templateList.map((row) => mapChallengeRow(row));
+  await ensureChallengeTemplates(supabase);
+  
+  // Load all challenges from database so we have both static catalog and generated ones
+  const { data: dbChallenges, error: challengesError } = await supabase
+    .from("challenges")
+    .select("*");
+  if (challengesError) {
+    throw challengesError;
+  }
+  const challenges = (dbChallenges ?? []).map((row) => mapChallengeRow(row));
 
   if (challenges.length === 0) {
     return;
@@ -1543,10 +1552,89 @@ async function ensureChallenges(
     challenges.map((challenge) => [challenge.id, challenge]),
   );
   const progressRows = await listAllUserChallengeProgressRows(supabase, user.id);
-  const desiredTimedSchedule = [
-    ...buildTimedChallengeSchedule(challenges, "daily", now),
-    ...buildTimedChallengeSchedule(challenges, "weekly", now),
-  ];
+
+  // Get full user profile for generator requirements (level/environment)
+  let fullUser: UserRecord;
+  if ("environmentType" in user && "totalXp" in user) {
+    fullUser = user as UserRecord;
+  } else {
+    const userRow = await getUserRowById(supabase, user.id);
+    if (!userRow) {
+      return;
+    }
+    fullUser = mapUserRow(userRow);
+  }
+
+  const desiredTimedSchedule: Array<{
+    challenge: ChallengeTemplateRecord;
+    assignedAt: string;
+    expiresAt: string;
+  }> = [];
+
+  // 1. Dailies backlog windows
+  const currentDailyWindowStart = startOfDay(now);
+  for (let offset = 0; offset < DAILY_BACKLOG_WINDOW_COUNT; offset++) {
+    const windowStart = addDays(currentDailyWindowStart, offset);
+    const expiresAt = addDays(windowStart, 1);
+    const windowStartStr = windowStart.toISOString();
+    const expiresAtStr = expiresAt.toISOString();
+
+    const existingAssignments = progressRows.filter(
+      (row) => row.assigned_at === windowStartStr && row.expires_at === expiresAtStr
+    );
+
+    if (existingAssignments.length >= 5) {
+      for (const row of existingAssignments) {
+        const challenge = templateById.get(row.challenge_id);
+        if (challenge) {
+          desiredTimedSchedule.push({
+            challenge,
+            assignedAt: windowStartStr,
+            expiresAt: expiresAtStr,
+          });
+        }
+      }
+    } else if (existingAssignments.length === 0) {
+      const generated = await generateTailoredChallenges(supabase, fullUser, "daily", windowStart);
+      desiredTimedSchedule.push(...generated);
+      for (const item of generated) {
+        templateById.set(item.challenge.id, item.challenge);
+      }
+    }
+  }
+
+  // 2. Weeklies backlog windows
+  const currentWeeklyWindowStart = startOfWeek(now, { weekStartsOn: 1 });
+  for (let offset = 0; offset < WEEKLY_BACKLOG_WINDOW_COUNT; offset++) {
+    const windowStart = addWeeks(currentWeeklyWindowStart, offset);
+    const expiresAt = addWeeks(windowStart, 1);
+    const windowStartStr = windowStart.toISOString();
+    const expiresAtStr = expiresAt.toISOString();
+
+    const existingAssignments = progressRows.filter(
+      (row) => row.assigned_at === windowStartStr && row.expires_at === expiresAtStr
+    );
+
+    if (existingAssignments.length >= 5) {
+      for (const row of existingAssignments) {
+        const challenge = templateById.get(row.challenge_id);
+        if (challenge) {
+          desiredTimedSchedule.push({
+            challenge,
+            assignedAt: windowStartStr,
+            expiresAt: expiresAtStr,
+          });
+        }
+      }
+    } else if (existingAssignments.length === 0) {
+      const generated = await generateTailoredChallenges(supabase, fullUser, "weekly", windowStart);
+      desiredTimedSchedule.push(...generated);
+      for (const item of generated) {
+        templateById.set(item.challenge.id, item.challenge);
+      }
+    }
+  }
+
   const desiredTimedScheduleByKey = new Map(
     desiredTimedSchedule.map((scheduledChallenge) => [
       scheduledChallengeKey(
@@ -1841,7 +1929,7 @@ async function applyChallengeProgress(
     progressRows
       .map((row) => {
         const challenge = row.challenge;
-        if (!challenge || !currentChallengeIds.has(challenge.id)) {
+        if (!challenge || (challenge.type === "achievement" && !currentChallengeIds.has(challenge.id))) {
           return null;
         }
 
@@ -2104,7 +2192,7 @@ export async function getHomeData(userId: string) {
     progressRows
       .map((row) => {
         const challenge = row.challenge;
-        if (!challenge || !currentChallengeIds.has(challenge.id) || row.completed) {
+        if (!challenge || (challenge.type === "achievement" && !currentChallengeIds.has(challenge.id)) || row.completed) {
           return null;
         }
 
@@ -2188,7 +2276,7 @@ export async function getChallengesData(userId: string) {
     progressRows
       .map((row) => {
         const challenge = row.challenge;
-        if (!challenge || !currentChallengeIds.has(challenge.id)) {
+        if (!challenge || (challenge.type === "achievement" && !currentChallengeIds.has(challenge.id))) {
           return null;
         }
 
