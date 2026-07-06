@@ -17,6 +17,17 @@ import { HomeCaptureStage } from "@/features/home/capture-stage";
 import { HomeIdleState } from "@/features/home/idle-state";
 import type { HomeData, HomeScreenMode } from "@/features/home/types";
 import type { CaptureResult } from "@/lib/types";
+interface ZoomCapabilities {
+  zoom?: {
+    min: number;
+    max: number;
+    step: number;
+  };
+}
+
+interface ZoomConstraints {
+  zoom?: number;
+}
 
 export function HomeScreen({ data }: { data: HomeData }) {
   const router = useRouter();
@@ -45,6 +56,13 @@ export function HomeScreen({ data }: { data: HomeData }) {
   const [revealReady, setRevealReady] = useState(false);
   const [scanningPhraseIndex, setScanningPhraseIndex] = useState(0);
   const [zoom, setZoom] = useState<number>(1);
+  const [isNativeZoomSupported, setIsNativeZoomSupported] = useState<boolean>(false);
+  const [activeResolution, setActiveResolution] = useState<string>("Unknown");
+
+  const zoomRef = useRef(zoom);
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
 
   const captureFailure = isFailureResult(result) ? result : null;
   const activeCaptureMode =
@@ -61,11 +79,17 @@ export function HomeScreen({ data }: { data: HomeData }) {
   function stopCamera() {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    setTimeout(() => {
+      setIsNativeZoomSupported(false);
+      setActiveResolution("Unknown");
+    }, 0);
   }
 
   const requestLocation = () => {
     if (!navigator.geolocation) {
-      setLocationStatus("denied");
+      setTimeout(() => {
+        setLocationStatus("denied");
+      }, 0);
       return;
     }
 
@@ -75,8 +99,10 @@ export function HomeScreen({ data }: { data: HomeData }) {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         };
-        setLocation(nextLocation);
-        setLocationStatus("granted");
+        setTimeout(() => {
+          setLocation(nextLocation);
+          setLocationStatus("granted");
+        }, 0);
         fetch("/api/location", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -84,12 +110,18 @@ export function HomeScreen({ data }: { data: HomeData }) {
         })
           .then((res) => res.json())
           .then((data: { label?: string }) => {
-            if (data?.label) setLocationLabel(data.label);
+            if (data?.label) {
+              setTimeout(() => {
+                setLocationLabel(data.label || null);
+              }, 0);
+            }
           })
           .catch(() => undefined);
       },
       () => {
-        setLocationStatus("denied");
+        setTimeout(() => {
+          setLocationStatus("denied");
+        }, 0);
       },
       { enableHighAccuracy: false, timeout: 5000 },
     );
@@ -97,12 +129,11 @@ export function HomeScreen({ data }: { data: HomeData }) {
 
   useEffect(() => {
     requestLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      (window as any).dexter_capture_active = mode !== "idle";
+      (window as unknown as Record<string, unknown>).dexter_capture_active = mode !== "idle";
       
       // If we transition back to "idle" (i.e. user comes back home out of capture/result screens),
       // dispatch a custom event to instantly check for challenges.
@@ -119,26 +150,168 @@ export function HomeScreen({ data }: { data: HomeData }) {
     }
 
     async function startCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+      const isPortrait = typeof window !== "undefined" && window.innerHeight > window.innerWidth;
+      
+      // Define a series of resolution configurations in order of preference
+      const presets = [
+        // 1. Orientation-matched 4:3 native high-res (maximizes native camera sensor resolution)
+        {
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: isPortrait ? 3024 : 4032 },
+            height: { ideal: isPortrait ? 4032 : 3024 }
+          },
+          audio: false
+        },
+        // 2. Orientation-matched 16:9 Full HD
+        {
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: isPortrait ? 1080 : 1920 },
+            height: { ideal: isPortrait ? 1920 : 1080 }
+          },
+          audio: false
+        },
+        // 3. Generic 16:9 Full HD Landscape (common fallback)
+        {
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        },
+        // 4. Orientation-matched 4:3 HD
+        {
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: isPortrait ? 960 : 1280 },
+            height: { ideal: isPortrait ? 1280 : 960 }
+          },
+          audio: false
+        },
+        // 5. Orientation-matched 16:9 HD (720p)
+        {
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: isPortrait ? 720 : 1280 },
+            height: { ideal: isPortrait ? 1280 : 720 }
+          },
+          audio: false
+        },
+        // 6. Absolute Fallback: let the browser decide
+        {
           video: { facingMode: { ideal: "environment" } },
-          audio: false,
-        });
+          audio: false
+        }
+      ];
+
+      let stream: MediaStream | null = null;
+
+      for (let i = 0; i < presets.length; i++) {
+        try {
+          console.log(`[Camera] Probing resolution preset #${i + 1}...`);
+          const tempStream = await navigator.mediaDevices.getUserMedia(presets[i]);
+          const track = tempStream.getVideoTracks()[0];
+          if (track) {
+            const settings = typeof track.getSettings === "function" ? track.getSettings() : {};
+            const w = settings.width || 0;
+            const h = settings.height || 0;
+            console.log(`[Camera] Preset #${i + 1} succeeded. Returned resolution: ${w}x${h}`);
+
+            // Accept if it's at least 720p in either dimension OR if it is our absolute fallback preset
+            if (w >= 720 || h >= 720 || i === presets.length - 1) {
+              stream = tempStream;
+              console.log(`[Camera] Accepted stream resolution: ${w}x${h}`);
+              break;
+            } else {
+              console.warn(`[Camera] Preset #${i + 1} returned low resolution (${w}x${h}), discarding and trying next...`);
+              tempStream.getTracks().forEach((t) => t.stop());
+            }
+          } else {
+            tempStream.getTracks().forEach((t) => t.stop());
+          }
+        } catch (err) {
+          console.warn(`[Camera] Preset #${i + 1} failed:`, err);
+        }
+      }
+
+      if (!stream) {
+        setCameraError("Camera unavailable. Check permissions and try again.");
+        return;
+      }
+
+      try {
         streamRef.current = stream;
         setCameraError(null);
+
+        const track = stream.getVideoTracks()[0];
+        if (track) {
+          const capabilities = typeof track.getCapabilities === "function" ? track.getCapabilities() : {};
+          const settings = typeof track.getSettings === "function" ? track.getSettings() : {};
+          const constraints = typeof track.getConstraints === "function" ? track.getConstraints() : {};
+
+          console.log("[Camera Track capabilities]", capabilities);
+          console.log("[Camera Track settings]", settings);
+          console.log("[Camera Track constraints]", constraints);
+
+          if (settings.width && settings.height) {
+            setActiveResolution(`${settings.width}x${settings.height}`);
+          } else {
+            setActiveResolution("Unknown");
+          }
+
+          const supportsNative = !!(capabilities as ZoomCapabilities).zoom;
+          setIsNativeZoomSupported(supportsNative);
+
+          if (supportsNative) {
+            const min = (capabilities as ZoomCapabilities).zoom?.min || 1;
+            const max = (capabilities as ZoomCapabilities).zoom?.max || 10;
+            const clamped = Math.max(min, Math.min(max, zoomRef.current));
+            try {
+              await track.applyConstraints({
+                advanced: [{ zoom: clamped } as ZoomConstraints],
+              } as MediaTrackConstraints);
+            } catch (err) {
+              console.warn("Failed to apply initial native zoom constraint:", err);
+            }
+          }
+        }
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
-      } catch {
-        setCameraError("Camera unavailable. Check permissions and try again.");
+      } catch (err) {
+        console.error("[Camera] Error starting stream playback:", err);
+        setCameraError("Camera playback failed. Please try again.");
       }
     }
 
     void startCamera();
     return () => stopCamera();
   }, [mode]);
+
+  useEffect(() => {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track || !isNativeZoomSupported) return;
+
+    const applyZoom = async () => {
+      try {
+        const capabilities = typeof track.getCapabilities === "function" ? track.getCapabilities() : {};
+        const min = (capabilities as ZoomCapabilities).zoom?.min || 1;
+        const max = (capabilities as ZoomCapabilities).zoom?.max || 10;
+        const clamped = Math.max(min, Math.min(max, zoom));
+        await track.applyConstraints({
+          advanced: [{ zoom: clamped } as ZoomConstraints],
+        } as MediaTrackConstraints);
+      } catch (err) {
+        console.error("Failed to apply zoom constraints dynamically:", err);
+      }
+    };
+
+    void applyZoom();
+  }, [zoom, isNativeZoomSupported]);
 
   useEffect(() => {
     if (mode !== "result" || !result || captureFailure) {
@@ -172,9 +345,12 @@ export function HomeScreen({ data }: { data: HomeData }) {
 
     if (!context) return;
 
-    // Crop the source video based on the zoom level (centered crop)
-    const sourceWidth = width / zoom;
-    const sourceHeight = height / zoom;
+    // If native hardware zoom is supported, the stream itself is already zoomed,
+    // so we capture the full frame (activeZoom = 1). Otherwise, crop digitally.
+    const activeZoom = isNativeZoomSupported ? 1 : zoom;
+
+    const sourceWidth = width / activeZoom;
+    const sourceHeight = height / activeZoom;
     const sourceX = (width - sourceWidth) / 2;
     const sourceY = (height - sourceHeight) / 2;
 
@@ -189,7 +365,7 @@ export function HomeScreen({ data }: { data: HomeData }) {
       width,
       height
     );
-    const next = canvasRef.current.toDataURL("image/jpeg", 0.85);
+    const next = canvasRef.current.toDataURL("image/jpeg", 0.95);
     setCaptureData(next);
     setMode("preview");
   };
@@ -313,6 +489,8 @@ export function HomeScreen({ data }: { data: HomeData }) {
               isPending={isPending}
               zoom={zoom}
               onZoomChange={setZoom}
+              isNativeZoomSupported={isNativeZoomSupported}
+              activeResolution={activeResolution}
               onClose={closeCapture}
               onReturnHome={returnToIdle}
               onTakeShot={takeShot}

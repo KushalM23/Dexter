@@ -28,6 +28,8 @@ type HomeCaptureStageProps = {
   isPending: boolean;
   zoom: number;
   onZoomChange: (zoom: number) => void;
+  isNativeZoomSupported: boolean;
+  activeResolution?: string;
   onClose: () => void;
   onReturnHome: () => void;
   onTakeShot: () => void;
@@ -44,6 +46,8 @@ export function HomeCaptureStage({
   isPending,
   zoom,
   onZoomChange,
+  isNativeZoomSupported,
+  activeResolution,
   onClose,
   onReturnHome,
   onTakeShot,
@@ -157,14 +161,21 @@ export function HomeCaptureStage({
           className="relative h-full w-full"
         >
           {mode === "camera" ? (
-            <motion.video
-              ref={videoRef}
-              className="h-full w-full object-cover origin-center"
-              playsInline
-              muted
-              animate={{ scale: zoom }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            />
+            <>
+              <motion.video
+                ref={videoRef}
+                className="h-full w-full object-cover origin-center"
+                playsInline
+                muted
+                animate={{ scale: isNativeZoomSupported ? 1 : zoom }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              />
+              {activeResolution && (
+                <div className="absolute top-4 left-4 z-50 bg-black/60 border border-white/10 text-white font-mono text-[10px] px-2 py-1 rounded-md shadow-md backdrop-blur-sm pointer-events-none">
+                  Resolution: {activeResolution} | Zoom: {zoom}x | Native Zoom: {isNativeZoomSupported ? "Yes" : "No"}
+                </div>
+              )}
+            </>
           ) : null}
 
           {mode === "preview" || mode === "processing" ? (

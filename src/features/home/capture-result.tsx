@@ -32,7 +32,9 @@ export function HomeCaptureResult({
   const [localRevealReady, setLocalRevealReady] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    setTimeout(() => {
+      setMounted(true);
+    }, 0);
   }, []);
 
   const activeRarity = (
@@ -54,7 +56,9 @@ export function HomeCaptureResult({
   useEffect(() => {
     if (result.kind === "error") return;
     
-    setLocalRevealReady(false);
+    setTimeout(() => {
+      setLocalRevealReady(false);
+    }, 0);
     const timeout = setTimeout(() => {
       setLocalRevealReady(true);
     }, revealDuration);
